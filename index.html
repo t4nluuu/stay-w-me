@@ -2702,42 +2702,44 @@ function applyGlassStyle(blur, opacity, shadow, light) {
         border-bottom: ${borderBottom} !important;
         border-right:  ${borderRight} !important;
       }
-      /* Spotify 保綠、結束保紅，只加玻璃感不改底色 */
+      /* Spotify 保綠、結束保紅 — 僅套光感，不改底色/不模糊 */
       .call-btn.spotify-btn .btn-circle {
-        background: rgba(29,185,84,${Math.min(op * 0.7, 0.85).toFixed(2)}) !important;
-        border-color: rgba(29,185,84,0.6) !important;
-      }
-      .call-btn.end-btn .btn-circle {
-        background: rgba(224,85,85,${Math.min(op * 0.7, 0.85).toFixed(2)}) !important;
-        border-color: rgba(224,85,85,0.4) !important;
-      }
-      /* 撥打頁取消鈕套玻璃（保紅） */
-      .outgoing-cancel-wrap .btn-circle {
-        backdrop-filter: blur(${blur}px) !important;
-        -webkit-backdrop-filter: blur(${blur}px) !important;
-        background: rgba(224,85,85,${Math.min(op * 0.7, 0.85).toFixed(2)}) !important;
-        box-shadow: ${boxShadow} !important;
+        background: #1db954 !important;
+        box-shadow: ${insetLight || 'none'} !important;
         border-top:    ${borderTop} !important;
         border-left:   ${borderLeft} !important;
         border-bottom: ${borderBottom} !important;
         border-right:  ${borderRight} !important;
       }
-      /* 來電頁接聽/拒絕鈕套玻璃（保綠/保紅） */
+      .call-btn.end-btn .btn-circle {
+        background: var(--color-danger) !important;
+        box-shadow: ${insetLight || 'none'} !important;
+        border-top:    ${borderTop} !important;
+        border-left:   ${borderLeft} !important;
+        border-bottom: ${borderBottom} !important;
+        border-right:  ${borderRight} !important;
+      }
+      /* 撥打頁取消鈕 — 僅套光感 */
+      .outgoing-cancel-wrap .btn-circle {
+        background: var(--color-danger) !important;
+        box-shadow: ${insetLight || 'none'} !important;
+        border-top:    ${borderTop} !important;
+        border-left:   ${borderLeft} !important;
+        border-bottom: ${borderBottom} !important;
+        border-right:  ${borderRight} !important;
+      }
+      /* 來電頁接聽/拒絕 — 僅套光感 */
       .btn-reject {
-        backdrop-filter: blur(${blur}px) !important;
-        -webkit-backdrop-filter: blur(${blur}px) !important;
-        background: rgba(224,85,85,${Math.min(op * 0.7, 0.85).toFixed(2)}) !important;
-        box-shadow: ${boxShadow} !important;
+        background: var(--color-danger) !important;
+        box-shadow: ${insetLight || 'none'} !important;
         border-top:    ${borderTop} !important;
         border-left:   ${borderLeft} !important;
         border-bottom: ${borderBottom} !important;
         border-right:  ${borderRight} !important;
       }
       .btn-accept {
-        backdrop-filter: blur(${blur}px) !important;
-        -webkit-backdrop-filter: blur(${blur}px) !important;
-        background: rgba(76,175,125,${Math.min(op * 0.7, 0.85).toFixed(2)}) !important;
-        box-shadow: ${boxShadow} !important;
+        background: var(--color-green) !important;
+        box-shadow: ${insetLight || 'none'} !important;
         border-top:    ${borderTop} !important;
         border-left:   ${borderLeft} !important;
         border-bottom: ${borderBottom} !important;
