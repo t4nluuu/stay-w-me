@@ -2,26 +2,29 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="陪伴">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
 <title>陪伴手機</title>
 <style>
 /* =====================
    CSS 變數 — 主題在這裡改
    ===================== */
 :root {
-  --color-bg:           #0a0a0f;
-  --color-surface:      #13131a;
-  --color-surface-2:    #1c1c26;
-  --color-border:       #2a2a3a;
-  --color-accent:       #7b6ef6;
-  --color-accent-dim:   #3d3780;
-  --color-text:         #f0f0f8;
-  --color-text-dim:     #8888aa;
-  --color-text-muted:   #55556a;
+  --color-bg:           #f5f5f7;
+  --color-surface:      #ffffff;
+  --color-surface-2:    #ebebf0;
+  --color-border:       #d1d1d6;
+  --color-accent:       #635bff;
+  --color-accent-dim:   #a9a4ff;
+  --color-text:         #1c1c1e;
+  --color-text-dim:     #48484a;
+  --color-text-muted:   #8e8e93;
   --color-danger:       #e05555;
-  --color-green:        #4caf7d;
+  --color-green:        #34c759;
   --radius-phone:       40px;
   --radius-btn:         50%;
   --radius-bubble:      18px;
@@ -54,15 +57,8 @@ body {
   width: 120px; height: 34px;
   background: #000; border-radius: 0 0 20px 20px; z-index: 100;
 }
-.status-bar {
-  height: 44px; padding: 14px 28px 0;
-  display: flex; align-items: center; justify-content: space-between;
-  font-size: 12px; font-weight: 600; color: var(--color-text);
-  flex-shrink: 0; z-index: 10; position: relative;
-}
-.status-bar .time-display { font-size: 15px; font-weight: 600; }
-.status-icons { display: flex; gap: 6px; align-items: center; }
-.status-icons svg { width: 16px; height: 12px; fill: var(--color-text); }
+/* status-bar hidden — clock only shown on lock screen */
+.status-bar { display: none; }
 
 .screen { position: absolute; inset: 0; display: none; flex-direction: column; }
 .screen.active { display: flex; }
@@ -355,6 +351,19 @@ select.settings-input { cursor: pointer; }
 .saved-theme-actions { display: flex; gap: 8px; }
 .saved-theme-actions button { background: none; border: none; font-size: 14px; cursor: pointer; padding: 2px; color: var(--color-text); }
 
+/* ---- THEME BG SPLIT ---- */
+.theme-bg-split { display: flex; gap: 10px; margin-bottom: 8px; }
+.theme-bg-btn {
+  flex: 1; background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-card); padding: 14px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  cursor: pointer; transition: border-color .15s;
+}
+.theme-bg-btn:active { border-color: var(--color-accent); }
+.theme-bg-icon { font-size: 22px; }
+.theme-bg-label { font-size: 13px; color: var(--color-text); font-weight: 600; }
+.theme-bg-panel { background: var(--color-surface-2); border-radius: var(--radius-card); padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--color-border); }
+
 /* ---- MY PROFILE SCREEN ---- */
 #screen-myprofile { background: var(--color-bg); }
 .my-profile-header { padding: 50px 24px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; flex-shrink: 0; position: relative; }
@@ -364,7 +373,22 @@ select.settings-input { cursor: pointer; }
 
 @media (max-width: 430px) {
   body { align-items: flex-start; background: var(--color-bg); }
-  #phone { width: 100vw; height: 100dvh; border-radius: 0; border: none; }
+  #phone {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    border: none;
+    /* iPhone safe area — 瀏海和 Home Bar */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  /* 桌面模擬用的瀏海裝飾在手機上隱藏 */
+  #phone::before { display: none; }
+  /* lock screen 在 PWA 全螢幕補一點頂部間距 */
+  #screen-lock { padding-top: 70px; }
+  #screen-home { padding-top: 8px; }
 }
 </style>
 <style id="home-custom-style"></style>
@@ -373,13 +397,7 @@ select.settings-input { cursor: pointer; }
 </head>
 <body>
 <div id="phone">
-  <div class="status-bar">
-    <span class="time-display" id="status-time">12:00</span>
-    <div class="status-icons">
-      <svg viewBox="0 0 24 16"><rect x="0" y="4" width="4" height="12" rx="1"/><rect x="6" y="2" width="4" height="14" rx="1"/><rect x="12" y="0" width="4" height="16" rx="1"/><rect x="18" y="0" width="5" height="16" rx="1" opacity=".3"/></svg>
-      <svg viewBox="0 0 25 12"><rect x="0" y="2" width="22" height="8" rx="2" stroke="white" stroke-width="1.5" fill="none"/><rect x="23" y="4" width="2" height="4" rx="1" fill="white"/><rect x="1.5" y="3.5" width="16" height="5" rx="1" fill="white"/></svg>
-    </div>
-  </div>
+  <!-- status-bar removed; real time shown on lock screen only -->
 
   <!-- LOCK -->
   <div id="screen-lock" class="screen active">
@@ -640,86 +658,104 @@ select.settings-input { cursor: pointer; }
     </div>
   </div>
 
-  <!-- THEME HUB -->
+  <!-- THEME HUB (redesigned) -->
   <div id="screen-theme" class="screen">
     <div class="screen-header">
       <div class="back-btn" onclick="showScreen('screen-home')">‹ 返回</div>
       <div class="screen-title">主題</div>
     </div>
     <div class="theme-list">
-      <div class="settings-section-title">全局預設主題</div>
+
+      <!-- 背景 -->
+      <div class="settings-section-title">背景</div>
+      <div class="theme-bg-split">
+        <div class="theme-bg-btn" onclick="showThemeBgPanel('lock')">
+          <div class="theme-bg-icon">🔒</div>
+          <div class="theme-bg-label">鎖定螢幕</div>
+        </div>
+        <div class="theme-bg-btn" onclick="showThemeBgPanel('home')">
+          <div class="theme-bg-icon">🏠</div>
+          <div class="theme-bg-label">桌面</div>
+        </div>
+      </div>
+      <!-- 鎖定螢幕背景 panel -->
+      <div id="theme-bg-lock-panel" class="theme-bg-panel" style="display:none;">
+        <div style="display:flex;gap:8px;padding:8px 0;">
+          <input class="settings-input" id="lock-bg-url" type="text" placeholder="https://…" style="flex:1;" oninput="previewLockBg()" />
+          <button class="settings-btn" style="margin:0;padding:8px 10px;width:auto;" onclick="document.getElementById('lock-bg-file').click()">上傳</button>
+          <input type="file" id="lock-bg-file" accept="image/*" style="display:none" onchange="handleLockBgFile(event)" />
+        </div>
+        <button class="settings-btn danger" style="margin-top:4px;" onclick="clearLockBg()">清除背景</button>
+      </div>
+      <!-- 桌面背景 panel -->
+      <div id="theme-bg-home-panel" class="theme-bg-panel" style="display:none;">
+        <div style="display:flex;gap:8px;padding:8px 0;">
+          <input class="settings-input" id="home-bg-url" type="text" placeholder="https://…" style="flex:1;" oninput="previewHomeBg()" />
+          <button class="settings-btn" style="margin:0;padding:8px 10px;width:auto;" onclick="document.getElementById('home-bg-file').click()">上傳</button>
+          <input type="file" id="home-bg-file" accept="image/*" style="display:none" onchange="handleHomeBgFile(event)" />
+        </div>
+        <button class="settings-btn danger" style="margin-top:4px;" onclick="clearHomeBg()">清除背景</button>
+      </div>
+
+      <!-- 全局預設主題 -->
+      <div class="settings-section-title" style="margin-top:20px;">全局預設主題</div>
       <div class="theme-preset-grid" id="theme-preset-grid"></div>
 
+      <!-- 自訂顏色 -->
       <div class="settings-section-title" style="margin-top:16px;">自訂顏色</div>
       <div class="theme-var-list" id="theme-var-list"></div>
 
-      <div class="settings-section-title" style="margin-top:16px;">圓角</div>
+      <!-- 其他（原圓角）-->
+      <div class="settings-section-title" style="margin-top:16px;">其他</div>
       <div class="theme-var-list" id="theme-radius-list"></div>
+      <!-- 毛玻璃效果 -->
+      <div class="theme-var-row" style="padding:14px 0;border-bottom:1px solid var(--color-border);">
+        <div class="theme-var-label">毛玻璃效果<div class="theme-var-sub">套用到 Home 桌面（需先設定背景圖）</div></div>
+        <div class="theme-var-right">
+          <input type="range" id="glass-blur-slider" min="0" max="30" value="0"
+            style="width:100px;" oninput="applyGlassBlur(this.value)" />
+          <span id="glass-blur-val" style="font-size:12px;color:var(--color-text-dim);min-width:28px;text-align:right;">0</span>
+        </div>
+      </div>
 
+      <!-- 自訂 CSS -->
+      <div class="settings-section-title" style="margin-top:16px;">自訂 CSS</div>
+      <div style="font-size:12px;color:var(--color-text-dim);margin-bottom:6px;">全局套用，可覆蓋任何外觀</div>
+      <button class="settings-btn" style="margin-bottom:6px;" onclick="insertGlobalCssExample()">📋 範例</button>
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        <button class="settings-btn" style="margin:0;flex:1;" onclick="exportGlobalCss()">匯出</button>
+        <button class="settings-btn" style="margin:0;flex:1;" onclick="document.getElementById('global-css-import').click()">匯入</button>
+        <input type="file" id="global-css-import" accept=".css,.txt" style="display:none" onchange="importGlobalCss(event)" />
+      </div>
+      <textarea id="global-css-input" placeholder="/* 在這裡輸入全局 CSS … */" rows="6"
+        style="width:100%;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:10px;color:var(--color-text);font-size:13px;font-family:monospace;resize:vertical;outline:none;line-height:1.5;"
+        oninput="livePreviewGlobalCss()"></textarea>
+
+      <!-- 儲存主題 -->
       <div class="settings-section-title" style="margin-top:16px;">儲存主題</div>
       <div class="theme-save-row">
         <input type="text" id="theme-save-name" placeholder="主題名稱…" />
         <button onclick="saveTheme()">儲存</button>
       </div>
       <div class="saved-theme-list" id="saved-theme-list"></div>
-      <button class="settings-btn" onclick="resetTheme()" style="margin-top:16px;">恢復預設</button>
+      <button class="settings-btn" onclick="resetTheme()" style="margin-top:12px;">恢復預設</button>
 
-      <div class="settings-section-title" style="margin-top:24px;">進階設定</div>
-      <button class="settings-btn" onclick="showScreen('screen-theme-home')">🏠 Home 頁設定</button>
-      <button class="settings-btn" onclick="openThemeCall()">📞 通話頁設定</button>
+      <!-- 通話頁設定（原進階設定）-->
+      <div class="settings-section-title" style="margin-top:24px;">通話頁設定</div>
+      <div style="font-size:12px;color:var(--color-text-dim);margin-bottom:10px;">選擇要設定的聯絡人</div>
+      <div id="theme-call-contact-inline"></div>
+
     </div>
   </div>
 
-  <!-- THEME HOME -->
-  <div id="screen-theme-home" class="screen">
-    <div class="screen-header">
-      <div class="back-btn" onclick="showScreen('screen-theme')">‹ 返回</div>
-      <div class="screen-title">Home 頁設定</div>
-    </div>
-    <div class="theme-list">
-      <div class="settings-section-title">背景</div>
-      <div class="theme-var-row">
-        <div class="theme-var-label">背景圖片 URL<div class="theme-var-sub">留空則使用背景色</div></div>
-      </div>
-      <div style="display:flex;gap:8px;padding:8px 0;">
-        <input class="settings-input" id="home-bg-url" type="text" placeholder="https://…" style="flex:1;" oninput="previewHomeBg()" />
-        <button class="settings-btn" style="margin:0;padding:8px 10px;width:auto;" onclick="document.getElementById('home-bg-file').click()">上傳</button>
-        <input type="file" id="home-bg-file" accept="image/*" style="display:none" onchange="handleHomeBgFile(event)" />
-      </div>
-
-      <div class="settings-section-title" style="margin-top:16px;">自訂 CSS</div>
-      <div style="font-size:12px;color:var(--color-text-dim);margin-bottom:6px;">套用到 #screen-home 的額外樣式，可覆蓋任何外觀</div>
-      <button class="settings-btn" style="margin-bottom:6px;" onclick="insertHomeCssExample()">📋 範例</button>
-      <div style="display:flex;gap:6px;margin-bottom:6px;">
-        <button class="settings-btn" style="margin:0;flex:1;" onclick="exportHomeCss()">匯出</button>
-        <button class="settings-btn" style="margin:0;flex:1;" onclick="document.getElementById('home-css-import').click()">匯入</button>
-        <input type="file" id="home-css-import" accept=".css,.txt" style="display:none" onchange="importHomeCss(event)" />
-      </div>
-      <textarea id="home-css-input" placeholder="/* 例：backdrop-filter: blur(10px); */" rows="7"
-        style="width:100%;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:10px;color:var(--color-text);font-size:13px;font-family:monospace;resize:vertical;outline:none;line-height:1.5;"
-        oninput="livePreviewHomeCss()"></textarea>
-
-      <div style="display:flex;gap:8px;margin-top:12px;">
-        <button class="settings-btn" style="flex:1;margin:0;" onclick="saveThemeHome()">儲存</button>
-        <button class="settings-btn danger" style="flex:1;margin:0;" onclick="resetThemeHome()">重置</button>
-      </div>
-    </div>
-  </div>
+  <!-- home-css-input shim for old code compatibility -->
+  <style id="global-custom-style"></style>
 
   <!-- THEME CALL: contact picker -->
-  <div id="screen-theme-call-pick" class="screen">
-    <div class="screen-header">
-      <div class="back-btn" onclick="showScreen('screen-theme')">‹ 返回</div>
-      <div class="screen-title">通話頁設定</div>
-    </div>
-    <div style="padding:16px 24px;font-size:14px;color:var(--color-text-dim);">選擇要設定的聯絡人</div>
-    <div id="theme-call-contact-list" style="flex:1;overflow-y:auto;"></div>
-  </div>
-
   <!-- THEME CALL: editor -->
   <div id="screen-theme-call" class="screen">
     <div class="screen-header">
-      <div class="back-btn" onclick="showScreen('screen-theme-call-pick')">‹ 返回</div>
+      <div class="back-btn" onclick="showScreen('screen-theme')">‹ 返回</div>
       <div class="screen-title" id="theme-call-title">通話頁</div>
     </div>
     <div class="theme-list">
@@ -811,17 +847,17 @@ select.settings-input { cursor: pointer; }
 <script>
 // ============ DEFAULTS ============
 const DEFAULT_THEME = {
-  '--color-bg': '#0a0a0f',
-  '--color-surface': '#13131a',
-  '--color-surface-2': '#1c1c26',
-  '--color-border': '#2a2a3a',
-  '--color-accent': '#7b6ef6',
-  '--color-accent-dim': '#3d3780',
-  '--color-text': '#f0f0f8',
-  '--color-text-dim': '#8888aa',
-  '--color-text-muted': '#55556a',
+  '--color-bg': '#f5f5f7',
+  '--color-surface': '#ffffff',
+  '--color-surface-2': '#ebebf0',
+  '--color-border': '#d1d1d6',
+  '--color-accent': '#635bff',
+  '--color-accent-dim': '#a9a4ff',
+  '--color-text': '#1c1c1e',
+  '--color-text-dim': '#48484a',
+  '--color-text-muted': '#8e8e93',
   '--color-danger': '#e05555',
-  '--color-green': '#4caf7d',
+  '--color-green': '#34c759',
   '--radius-phone': '40px',
   '--radius-btn': '50%',
   '--radius-bubble': '18px',
@@ -830,10 +866,11 @@ const DEFAULT_THEME = {
 };
 
 const PRESET_THEMES = [
+  { name: '白晝', vars: { '--color-bg':'#f5f5f7','--color-surface':'#ffffff','--color-surface-2':'#ebebf0','--color-border':'#d1d1d6','--color-accent':'#635bff','--color-accent-dim':'#a9a4ff','--color-text':'#1c1c1e','--color-text-dim':'#48484a','--color-text-muted':'#8e8e93','--color-danger':'#e05555','--color-green':'#34c759','--radius-btn':'50%','--radius-card':'16px','--radius-bubble':'18px','--radius-input':'24px','--radius-phone':'40px' }, dots:['#f5f5f7','#635bff','#1c1c1e'] },
   { name: '深夜', vars: { '--color-bg':'#0a0a0f','--color-surface':'#13131a','--color-surface-2':'#1c1c26','--color-border':'#2a2a3a','--color-accent':'#7b6ef6','--color-accent-dim':'#3d3780','--color-text':'#f0f0f8','--color-text-dim':'#8888aa','--color-text-muted':'#55556a','--color-danger':'#e05555','--color-green':'#4caf7d','--radius-btn':'50%','--radius-card':'16px','--radius-bubble':'18px','--radius-input':'24px','--radius-phone':'40px' }, dots:['#0a0a0f','#7b6ef6','#f0f0f8'] },
-  { name: '奶茶', vars: { '--color-bg':'#1a1410','--color-surface':'#241e18','--color-surface-2':'#2e2620','--color-border':'#3d3428','--color-accent':'#c8956a','--color-accent-dim':'#7a5040','--color-text':'#f5eee6','--color-text-dim':'#a08878','--color-text-muted':'#6a5548','--color-danger':'#c85555','--color-green':'#7ab87a','--radius-btn':'50%','--radius-card':'12px','--radius-bubble':'16px','--radius-input':'20px','--radius-phone':'40px' }, dots:['#1a1410','#c8956a','#f5eee6'] },
-  { name: '薄荷', vars: { '--color-bg':'#0a1210','--color-surface':'#121c18','--color-surface-2':'#1c2820','--color-border':'#2a3a30','--color-accent':'#5ec9a0','--color-accent-dim':'#2a6a50','--color-text':'#eef8f2','--color-text-dim':'#80aaa0','--color-text-muted':'#506858','--color-danger':'#e05555','--color-green':'#5ec9a0','--radius-btn':'50%','--radius-card':'14px','--radius-bubble':'18px','--radius-input':'24px','--radius-phone':'40px' }, dots:['#0a1210','#5ec9a0','#eef8f2'] },
-  { name: '玫瑰', vars: { '--color-bg':'#120a0e','--color-surface':'#1c1016','--color-surface-2':'#261820','--color-border':'#3a2030','--color-accent':'#e87aa0','--color-accent-dim':'#7a3050','--color-text':'#f8eef2','--color-text-dim':'#aa8090','--color-text-muted':'#6a5060','--color-danger':'#e05555','--color-green':'#7ab87a','--radius-btn':'50%','--radius-card':'20px','--radius-bubble':'20px','--radius-input':'28px','--radius-phone':'44px' }, dots:['#120a0e','#e87aa0','#f8eef2'] },
+  { name: '奶茶', vars: { '--color-bg':'#f5ede3','--color-surface':'#fffaf5','--color-surface-2':'#f0e6d8','--color-border':'#ddd0c0','--color-accent':'#b07850','--color-accent-dim':'#d4a97a','--color-text':'#3a2a1e','--color-text-dim':'#7a6050','--color-text-muted':'#a89080','--color-danger':'#c85555','--color-green':'#5a9a5a','--radius-btn':'50%','--radius-card':'12px','--radius-bubble':'16px','--radius-input':'20px','--radius-phone':'40px' }, dots:['#f5ede3','#b07850','#3a2a1e'] },
+  { name: '薄荷', vars: { '--color-bg':'#eef8f3','--color-surface':'#ffffff','--color-surface-2':'#ddf0e8','--color-border':'#b8dece','--color-accent':'#2a9a70','--color-accent-dim':'#7acca8','--color-text':'#0e2e20','--color-text-dim':'#4a7860','--color-text-muted':'#7aaa90','--color-danger':'#e05555','--color-green':'#2a9a70','--radius-btn':'50%','--radius-card':'14px','--radius-bubble':'18px','--radius-input':'24px','--radius-phone':'40px' }, dots:['#eef8f3','#2a9a70','#0e2e20'] },
+  { name: '玫瑰', vars: { '--color-bg':'#fdf0f4','--color-surface':'#ffffff','--color-surface-2':'#fae0ea','--color-border':'#f0c0d4','--color-accent':'#d05580','--color-accent-dim':'#f0a0c0','--color-text':'#2e0e1a','--color-text-dim':'#8a4060','--color-text-muted':'#c08090','--color-danger':'#e05555','--color-green':'#5a9a70','--radius-btn':'50%','--radius-card':'20px','--radius-bubble':'20px','--radius-input':'28px','--radius-phone':'44px' }, dots:['#fdf0f4','#d05580','#2e0e1a'] },
 ];
 
 const SERVICE_URLS = {
@@ -863,7 +900,7 @@ let state = {
   themes: [],
   activeThemeVars: {},
   appLayout: null,
-  themeHome: { bgUrl: '', bgData: '', css: '' },
+  themeHome: { bgUrl:'', bgData:'', lockBgUrl:'', lockBgData:'', css:'', globalCss:'', glassBlur:0 },
   themeCall: {},  // keyed by contact id: { bgUrl, bgData, css, bubbleCss }
   themeCallContactId: null,
   contact: null,
@@ -909,7 +946,7 @@ function loadAll() {
     state.themes = d.themes || [];
     state.activeThemeVars = d.activeThemeVars || {};
     state.appLayout = d.appLayout || null;
-    state.themeHome = d.themeHome || { bgUrl:'', bgData:'', css:'' };
+    state.themeHome = { bgUrl:'', bgData:'', lockBgUrl:'', lockBgData:'', css:'', globalCss:'', glassBlur:0, ...(d.themeHome||{}) };
     state.themeCall = d.themeCall || {};
   }
   if (!state.contacts.length) {
@@ -954,6 +991,7 @@ function renderAll() {
   loadMyProfileUI();
   updateLogCount();
   loadThemeHomeUI();
+  renderThemeCallInline();
 }
 
 // ============ APP GRID ============
@@ -1178,7 +1216,7 @@ function updateClock() {
   const hh = String(now.getHours()).padStart(2,'0');
   const mm = String(now.getMinutes()).padStart(2,'0');
   const t = `${hh}:${mm}`;
-  document.getElementById('status-time').textContent = t;
+  // 時間只顯示在鎖定畫面（status-bar 已移除）
   document.getElementById('lock-time-display').textContent = t;
   const days = ['日','一','二','三','四','五','六'];
   document.getElementById('lock-date-display').textContent = `星期${days[now.getDay()]} ${now.getMonth()+1}月${now.getDate()}日`;
@@ -1871,11 +1909,7 @@ const THEME_VARS = [
   { var:'--color-green', label:'接聽/確認', type:'color' },
 ];
 const RADIUS_VARS = [
-  { var:'--radius-btn', label:'通話按鈕圓角（50%=圓形，0px=方形）', type:'text' },
   { var:'--radius-card', label:'卡片圓角', type:'text' },
-  { var:'--radius-bubble', label:'對話泡泡圓角', type:'text' },
-  { var:'--radius-input', label:'輸入框圓角', type:'text' },
-  { var:'--radius-phone', label:'手機外框圓角', type:'text' },
 ];
 
 function getCurrentThemeVars() {
@@ -1905,11 +1939,22 @@ function renderThemeScreen() {
 
   // color vars
   const vl=document.getElementById('theme-var-list'); vl.innerHTML='';
-  THEME_VARS.forEach(v => {
+  THEME_VARS.forEach((v,i) => {
     const cur = getComputedStyle(document.documentElement).getPropertyValue(v.var).trim();
+    const inputId = `color-picker-${i}`;
+    const swatchId = `color-swatch-${i}`;
     const row=document.createElement('div'); row.className='theme-var-row';
-    row.innerHTML=`<div class="theme-var-label">${v.label}<div class="theme-var-sub">${v.var}</div></div><div class="theme-var-right"><div class="color-swatch" style="background:${cur}" onclick="this.nextElementSibling.click()"></div><input type="color" class="color-input-hidden" value="${cur.length===7?cur:'#000000'}" onchange="updateVar('${v.var}',this.value);this.previousElementSibling.style.background=this.value" /></div>`;
+    row.innerHTML=`<div class="theme-var-label">${v.label}<div class="theme-var-sub">${v.var}</div></div><div class="theme-var-right"><div class="color-swatch" id="${swatchId}" style="background:${cur}"></div><input type="color" id="${inputId}" class="color-input-hidden" value="${/^#[0-9a-fA-F]{6}$/.test(cur)?cur:'#000000'}" /></div>`;
     vl.appendChild(row);
+    // bind after append so elements exist
+    const swatch = row.querySelector(`#${swatchId}`);
+    const input  = row.querySelector(`#${inputId}`);
+    swatch.addEventListener('click', () => input.click());
+    swatch.addEventListener('touchend', (e) => { e.preventDefault(); input.click(); });
+    input.addEventListener('input', () => {
+      updateVar(v.var, input.value);
+      swatch.style.background = input.value;
+    });
   });
 
   // radius vars
@@ -1978,93 +2023,198 @@ function applyThemeHome() {
   } else {
     el.style.backgroundImage = '';
   }
-  document.getElementById('home-custom-style').textContent =
-    th.css ? `#screen-home { ${th.css} }` : '';
+  // home-custom-style carries glass blur; global-custom-style carries global CSS
+  const blurVal = state.themeHome.glassBlur || 0;
+  applyGlassBlurStyle(blurVal);
+}
+
+function applyLockBg() {
+  const th = state.themeHome;
+  const el = document.getElementById('screen-lock');
+  if (th.lockBgData || th.lockBgUrl) {
+    el.style.backgroundImage = `url('${th.lockBgData || th.lockBgUrl}')`;
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+  } else {
+    el.style.backgroundImage = '';
+  }
 }
 
 function loadThemeHomeUI() {
   const th = state.themeHome;
-  document.getElementById('home-bg-url').value = th.bgUrl || '';
-  document.getElementById('home-css-input').value = th.css || '';
+  const hUrl = document.getElementById('home-bg-url');
+  if (hUrl) hUrl.value = th.bgUrl || '';
+  const lUrl = document.getElementById('lock-bg-url');
+  if (lUrl) lUrl.value = th.lockBgUrl || '';
+  const gcss = document.getElementById('global-css-input');
+  if (gcss) gcss.value = th.globalCss || '';
+  const slider = document.getElementById('glass-blur-slider');
+  if (slider) { slider.value = th.glassBlur || 0; document.getElementById('glass-blur-val').textContent = th.glassBlur || 0; }
+}
+
+// 背景 panel toggle
+function showThemeBgPanel(which) {
+  const lockP = document.getElementById('theme-bg-lock-panel');
+  const homeP = document.getElementById('theme-bg-home-panel');
+  if (which === 'lock') {
+    lockP.style.display = lockP.style.display === 'none' ? 'block' : 'none';
+    homeP.style.display = 'none';
+  } else {
+    homeP.style.display = homeP.style.display === 'none' ? 'block' : 'none';
+    lockP.style.display = 'none';
+  }
 }
 
 function previewHomeBg() {
   const url = document.getElementById('home-bg-url').value.trim();
   const el = document.getElementById('screen-home');
-  if (url) { el.style.backgroundImage = `url('${url}')`; el.style.backgroundSize='cover'; el.style.backgroundPosition='center'; }
-  else { el.style.backgroundImage = ''; }
+  if (url) {
+    el.style.backgroundImage = `url('${url}')`;
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+    state.themeHome.bgUrl = url; state.themeHome.bgData = '';
+  } else {
+    el.style.backgroundImage = '';
+    state.themeHome.bgUrl = '';
+  }
+  saveAll();
+}
+
+function previewLockBg() {
+  const url = document.getElementById('lock-bg-url').value.trim();
+  const el = document.getElementById('screen-lock');
+  if (url) {
+    el.style.backgroundImage = `url('${url}')`;
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+    state.themeHome.lockBgUrl = url; state.themeHome.lockBgData = '';
+  } else {
+    el.style.backgroundImage = '';
+    state.themeHome.lockBgUrl = '';
+  }
+  saveAll();
+}
+
+function clearHomeBg() {
+  state.themeHome.bgUrl = ''; state.themeHome.bgData = '';
+  document.getElementById('home-bg-url').value = '';
+  document.getElementById('screen-home').style.backgroundImage = '';
+  saveAll();
+}
+
+function clearLockBg() {
+  state.themeHome.lockBgUrl = ''; state.themeHome.lockBgData = '';
+  document.getElementById('lock-bg-url').value = '';
+  document.getElementById('screen-lock').style.backgroundImage = '';
+  saveAll();
 }
 
 function handleHomeBgFile(e) {
   const file = e.target.files[0]; if (!file) return;
   const r = new FileReader();
   r.onload = ev => {
-    state.themeHome.bgData = ev.target.result;
+    state.themeHome.bgData = ev.target.result; state.themeHome.bgUrl = '';
     document.getElementById('home-bg-url').value = '';
-    document.getElementById('screen-home').style.backgroundImage = `url('${ev.target.result}')`;
-    document.getElementById('screen-home').style.backgroundSize = 'cover';
-    document.getElementById('screen-home').style.backgroundPosition = 'center';
+    const el = document.getElementById('screen-home');
+    el.style.backgroundImage = `url('${ev.target.result}')`;
+    el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center';
+    saveAll();
   };
   r.readAsDataURL(file); e.target.value = '';
 }
 
-function livePreviewHomeCss() {
-  const css = document.getElementById('home-css-input').value;
-  document.getElementById('home-custom-style').textContent = css ? `#screen-home { ${css} }` : '';
-}
-
-function insertHomeCssExample() {
-  document.getElementById('home-css-input').value =
-`/* 毛玻璃效果（需要先設定背景圖）*/
-backdrop-filter: blur(12px);
--webkit-backdrop-filter: blur(12px);
-background-color: rgba(0,0,0,0.3) !important;`;
-  livePreviewHomeCss();
-}
-
-function exportHomeCss() {
-  const css = document.getElementById('home-css-input').value;
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([css],{type:'text/css'}));
-  a.download = 'home-theme.css'; a.click();
-}
-
-function importHomeCss(e) {
+function handleLockBgFile(e) {
   const file = e.target.files[0]; if (!file) return;
   const r = new FileReader();
-  r.onload = ev => { document.getElementById('home-css-input').value = ev.target.result; livePreviewHomeCss(); };
+  r.onload = ev => {
+    state.themeHome.lockBgData = ev.target.result; state.themeHome.lockBgUrl = '';
+    document.getElementById('lock-bg-url').value = '';
+    const el = document.getElementById('screen-lock');
+    el.style.backgroundImage = `url('${ev.target.result}')`;
+    el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center';
+    saveAll();
+  };
+  r.readAsDataURL(file); e.target.value = '';
+}
+
+// 毛玻璃拉桿
+function applyGlassBlur(val) {
+  document.getElementById('glass-blur-val').textContent = val;
+  state.themeHome.glassBlur = parseInt(val);
+  applyGlassBlurStyle(val);
+  saveAll();
+}
+
+function applyGlassBlurStyle(val) {
+  const css = val > 0
+    ? `#screen-home { backdrop-filter: blur(${val}px); -webkit-backdrop-filter: blur(${val}px); background-color: rgba(0,0,0,0.25) !important; }`
+    : '';
+  document.getElementById('home-custom-style').textContent = css;
+}
+
+// 全局 CSS
+function livePreviewGlobalCss() {
+  const css = document.getElementById('global-css-input').value;
+  document.getElementById('global-custom-style').textContent = css;
+  state.themeHome.globalCss = css;
+}
+
+function insertGlobalCssExample() {
+  document.getElementById('global-css-input').value =
+`/* 範例：讓 Home 桌面圖示文字變白 */
+.app-icon-label { color: #ffffff !important; text-shadow: 0 1px 4px rgba(0,0,0,.7); }`;
+  livePreviewGlobalCss();
+}
+
+function exportGlobalCss() {
+  const css = document.getElementById('global-css-input').value;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([css],{type:'text/css'}));
+  a.download = 'global-theme.css'; a.click();
+}
+
+function importGlobalCss(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    document.getElementById('global-css-input').value = ev.target.result;
+    livePreviewGlobalCss();
+  };
   r.readAsText(file); e.target.value = '';
 }
 
-function saveThemeHome() {
-  state.themeHome.bgUrl = document.getElementById('home-bg-url').value.trim();
-  state.themeHome.css = document.getElementById('home-css-input').value;
-  if (!document.getElementById('home-bg-url').value.trim()) state.themeHome.bgData = state.themeHome.bgData || '';
-  saveAll(); applyThemeHome(); showScreen('screen-theme');
-}
-
-function resetThemeHome() {
-  state.themeHome = { bgUrl:'', bgData:'', css:'' };
-  saveAll(); applyThemeHome(); loadThemeHomeUI();
-}
-
-// ============ THEME CALL ============
-function openThemeCall() {
-  renderThemeCallPicker();
-  showScreen('screen-theme-call-pick');
-}
-
-function renderThemeCallPicker() {
-  const list = document.getElementById('theme-call-contact-list');
+// 通話頁設定 inline 聯絡人列表（整合進主題頁）
+function renderThemeCallInline() {
+  const list = document.getElementById('theme-call-contact-inline');
+  if (!list) return;
   list.innerHTML = '';
   if (!state.contacts.length) { list.innerHTML='<div class="no-contact">請先新增聯絡人</div>'; return; }
   state.contacts.forEach(c => {
     const div = document.createElement('div'); div.className='contact-item';
     const av = (c.avatarData||c.avatarUrl) ? `<div class="contact-avatar"><img src="${c.avatarData||c.avatarUrl}" /></div>` : `<div class="contact-avatar">${c.emoji||'👤'}</div>`;
-    div.innerHTML = `${av}<div class="contact-info"><div class="name">${c.nickname||c.name}</div></div>`;
+    div.innerHTML = `${av}<div class="contact-info"><div class="name">${c.nickname||c.name}</div><div class="note">點擊進入通話頁設定</div></div>`;
     div.onclick = () => openThemeCallEditor(c);
     list.appendChild(div);
   });
+}
+
+// stub for old saveThemeHome references
+function saveThemeHome() { saveAll(); applyThemeHome(); }
+function resetThemeHome() {
+  state.themeHome = { bgUrl:'', bgData:'', lockBgUrl:'', lockBgData:'', css:'', globalCss:'', glassBlur:0 };
+  saveAll(); applyThemeHome(); applyLockBg(); loadThemeHomeUI();
+}
+
+// ============ THEME CALL ============
+function openThemeCall() {
+  // now rendered inline on theme page; kept for back-compat
+  renderThemeCallInline();
+  showScreen('screen-theme');
+}
+
+function renderThemeCallPicker() {
+  // legacy — now using renderThemeCallInline
+  renderThemeCallInline();
 }
 
 function openThemeCallEditor(c) {
@@ -2177,7 +2327,7 @@ function saveThemeCall() {
   state.themeCall[id].bubbleCss = document.getElementById('bubble-css-input').value;
   saveAll();
   applyCallThemeForContact(id);
-  showScreen('screen-theme-call-pick');
+  showScreen('screen-theme');
 }
 
 function resetThemeCall() {
@@ -2200,6 +2350,12 @@ function applyCallThemeForContact(id) {
 
 function applyAllCustomThemes() {
   applyThemeHome();
+  applyLockBg();
+  // re-apply global CSS
+  const gcss = state.themeHome.globalCss || '';
+  document.getElementById('global-custom-style').textContent = gcss;
+  const slider = document.getElementById('glass-blur-slider');
+  if (slider) { slider.value = state.themeHome.glassBlur || 0; document.getElementById('glass-blur-val').textContent = state.themeHome.glassBlur || 0; }
   const active = state.contact;
   if (active) applyCallThemeForContact(active.id);
 }
