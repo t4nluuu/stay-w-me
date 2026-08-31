@@ -251,6 +251,14 @@ input, textarea, [contenteditable] {
 .typing-dots span:nth-child(2) { animation-delay: .2s; }
 .typing-dots span:nth-child(3) { animation-delay: .4s; }
 @keyframes blink { 0%,80%,100%{opacity:.3} 40%{opacity:1} }
+.bubble-delete-btn {
+  position: absolute; right: -4px; top: -10px;
+  background: var(--color-danger); color: white;
+  font-size: 11px; padding: 2px 8px; border-radius: 10px;
+  cursor: pointer; white-space: nowrap; z-index: 10;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+}
+.bubble { position: relative; }
 .chat-input-area { padding: 12px 16px; display: flex; gap: 10px; align-items: flex-end; border-top: 1px solid var(--color-border); flex-shrink: 0; }
 .chat-input { flex: 1; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-input); padding: 10px 16px; color: var(--color-text); font-size: 15px; font-family: var(--font-main); resize: none; outline: none; max-height: 100px; line-height: 1.4; }
 .chat-input::placeholder { color: var(--color-text-muted); }
@@ -534,8 +542,12 @@ select.settings-input { cursor: pointer; }
 
   <!-- CALL -->
   <div id="screen-call" class="screen">
-    <div class="call-header">
-      <div class="call-contact-name" id="call-contact-name">言</div>
+    <div class="call-header" style="text-align:center;">
+      <div style="position:relative;display:inline-block;">
+        <div class="call-contact-name" id="call-contact-name">言</div>
+        <div id="done-speaking-btn" onclick="doneSpeaking()" title="我說完了"
+          style="position:absolute;left:calc(100% + 6px);top:50%;transform:translateY(-50%);font-size:18px;cursor:pointer;opacity:0.75;display:none;user-select:none;white-space:nowrap;">🌀</div>
+      </div>
       <div class="call-timer" id="call-timer">00:00</div>
     </div>
     <div class="chat-area" id="chat-area"></div>
@@ -1044,6 +1056,10 @@ let state = {
   avatarPickerTarget: null,
   editingContactId: null,
   editingProfileId: null,
+  _pendingUserMessages: [],
+  _waitTimer: null,
+  _aiResponding: false,
+  _openerDone: false,
 };
 
 // ============ INDEXEDDB（圖片儲存）============
@@ -1799,15 +1815,36 @@ function startCall() {
   document.getElementById('call-contact-name').textContent = c.nickname || c.name;
   state.chatHistory = [];
   state.callStart = new Date();
+  state._pendingUserMessages = []; // 累積訊息
+  state._waitTimer = null;         // 30秒等待計時器
+  state._aiResponding = false;     // AI 回應中
+  state._openerDone = false;       // opener 是否已觸發
   document.getElementById('chat-area').innerHTML = '';
+  document.getElementById('done-speaking-btn').style.display = 'none';
   showScreen('screen-call');
   applyCallThemeForContact(c.id);
   startTimer();
+  // 接通後靜默30秒，等你先開口
+  state._waitTimer = setTimeout(() => {
+    if (!state._openerDone && !state._aiResponding) {
+      triggerOpener();
+    }
+  }, 30000);
+}
+
+function triggerOpener() {
+  state._openerDone = true;
+  state._aiResponding = true;
+  document.getElementById('done-speaking-btn').style.display = 'none';
   sendAIMessage(null, true);
 }
 
 function endCall() {
   clearInterval(state.timerInterval);
+  clearTimeout(state._waitTimer);
+  state._waitTimer = null;
+  state._pendingUserMessages = [];
+  state._aiResponding = false;
   const dur = Math.floor((new Date() - state.callStart) / 1000);
   logCall('ended', dur);
   showScreen('screen-home');
@@ -1842,11 +1879,51 @@ function appendBubble(text, who, isTyping) {
   if (isTyping) {
     div.id = 'typing-bubble';
     div.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
-  } else { div.textContent = text; }
+  } else {
+    div.textContent = text;
+    // 長按刪除
+    let pressTimer;
+    const startPress = () => { pressTimer = setTimeout(() => showDeleteBubble(div, who), 600); };
+    const cancelPress = () => clearTimeout(pressTimer);
+    div.addEventListener('touchstart', startPress, { passive: true });
+    div.addEventListener('touchend', cancelPress);
+    div.addEventListener('touchmove', cancelPress, { passive: true });
+    div.addEventListener('mousedown', startPress);
+    div.addEventListener('mouseup', cancelPress);
+    div.addEventListener('mouseleave', cancelPress);
+  }
   area.appendChild(div);
   area.scrollTop = area.scrollHeight;
   return div;
 }
+
+function showDeleteBubble(div, who) {
+  // 避免重複
+  if (div.querySelector('.bubble-delete-btn')) return;
+  const btn = document.createElement('div');
+  btn.className = 'bubble-delete-btn';
+  btn.textContent = '刪除';
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    // 從 chatHistory 裡移除對應訊息
+    const area = document.getElementById('chat-area');
+    const bubbles = [...area.querySelectorAll('.bubble:not(.system)')];
+    const idx = bubbles.indexOf(div);
+    if (idx >= 0 && idx < state.chatHistory.length) {
+      state.chatHistory.splice(idx, 1);
+    }
+    div.remove();
+  };
+  div.appendChild(btn);
+  // 點其他地方取消
+  setTimeout(() => {
+    document.addEventListener('click', function dismiss() {
+      btn.remove();
+      document.removeEventListener('click', dismiss);
+    }, { once: true });
+  }, 100);
+}
+
 function removeTyping() { const t=document.getElementById('typing-bubble'); if(t) t.remove(); }
 function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
 function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
@@ -1855,15 +1932,46 @@ function sendMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim(); if(!text) return;
   input.value=''; input.style.height='auto';
-  appendBubble(text,'me');
-  state.chatHistory.push({role:'user',content:text});
-  sendAIMessage(text,false);
+
+  // 取消接通opener倒計時（你先開口了）
+  if (!state._openerDone) {
+    clearTimeout(state._waitTimer);
+    state._waitTimer = null;
+    state._openerDone = true;
+  }
+
+  appendBubble(text, 'me');
+  state.chatHistory.push({role:'user', content:text});
+  state._pendingUserMessages.push(text);
+
+  // 如果 AI 正在回應中，不重複觸發
+  if (state._aiResponding) return;
+
+  // 顯示螺旋按鈕，重置30秒
+  document.getElementById('done-speaking-btn').style.display = 'inline';
+  clearTimeout(state._waitTimer);
+  state._waitTimer = setTimeout(() => {
+    doneSpeaking();
+  }, 30000);
+}
+
+// 手動「我說完了」或30秒到自動觸發
+function doneSpeaking() {
+  clearTimeout(state._waitTimer);
+  state._waitTimer = null;
+  document.getElementById('done-speaking-btn').style.display = 'none';
+  if (state._aiResponding || state._pendingUserMessages.length === 0) return;
+  state._pendingUserMessages = [];
+  state._aiResponding = true;
+  sendAIMessage(null, false);
 }
 
 async function sendAIMessage(userText, isOpener) {
   const profile = getActiveProfile();
   if (!profile || !profile.apiKey) {
-    appendBubble('（請先在設定填入 API Key）','system'); return;
+    appendBubble('（請先在設定填入 API Key）','system');
+    state._aiResponding = false;
+    return;
   }
   appendBubble('','them',true);
   const c = state.contact;
@@ -1888,18 +1996,20 @@ async function sendAIMessage(userText, isOpener) {
     const result = await callAPI(profile, systemPrompt, messages);
     removeTyping();
     appendBubble(result, 'them');
-    if (!isOpener) {
-      state.chatHistory.push({role:'assistant',content:result});
-    } else {
+    if (isOpener) {
       state.chatHistory = [
         {role:'user',content:'[通話剛接通]'},
         {role:'assistant',content:result}
       ];
+    } else {
+      state.chatHistory.push({role:'assistant',content:result});
     }
   } catch(e) {
     removeTyping();
     appendBubble(`（連線失敗：${e.message}）`,'system');
   }
+  // AI 說完，純粹等待，不自動再開口
+  state._aiResponding = false;
 }
 
 async function callAPI(profile, system, messages) {
@@ -2728,7 +2838,7 @@ function applyGlassStyle(blur, opacity, shadow, light) {
       #screen-call .call-contact-name,
       #screen-call .call-timer,
       #screen-call .call-btn-label { color: #ffffff !important; }
-      #screen-call .bubble.them { color: #f0f0f8 !important; }
+      /* bubble 文字跟著主題走，不強制覆蓋 */
       /* 輸入框保持主題色（輸入框是淺色底） */
       #screen-call .chat-input { color: var(--color-text) !important; }
       /* 通話頁六顆按鈕套玻璃 */
