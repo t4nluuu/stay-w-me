@@ -387,6 +387,27 @@ select.settings-input { cursor: pointer; }
 .theme-bg-label { font-size: 13px; color: var(--color-text); font-weight: 600; }
 .theme-bg-panel { background: var(--color-surface-2); border-radius: var(--radius-card); padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--color-border); }
 .theme-bg-status { font-size: 12px; color: var(--color-green); min-height: 18px; margin-bottom: 2px; font-weight: 500; }
+/* 玻璃預覽 */
+.glass-preview-icon {
+  width: 54px; height: 54px; border-radius: 14px;
+  background: rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.3);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: 22px; gap: 2px; cursor: default;
+  transition: background .2s, box-shadow .2s, border .2s, backdrop-filter .2s;
+}
+.glass-preview-label {
+  font-size: 9px; color: rgba(255,255,255,0.9);
+  text-align: center; line-height: 1;
+}
+.glass-preview-dock {
+  background: rgba(128,128,128,0.25);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 18px;
+  padding: 8px 10px;
+  display: flex; gap: 10px; justify-content: center;
+  transition: background .2s, box-shadow .2s, backdrop-filter .2s;
+}
 /* 選中狀態的背景按鈕 */
 .theme-bg-btn.active {
   background: var(--color-surface-2);
@@ -421,6 +442,7 @@ select.settings-input { cursor: pointer; }
   .contact-detail-header { padding-top: max(50px, calc(env(safe-area-inset-top) + 14px)); }
   .my-profile-header { padding-top: max(50px, calc(env(safe-area-inset-top) + 14px)); }
   .contact-back { top: max(50px, calc(env(safe-area-inset-top) + 14px)); }
+  #contact-delete-btn { top: max(50px, calc(env(safe-area-inset-top) + 14px)) !important; }
   .my-profile-back { top: max(50px, calc(env(safe-area-inset-top) + 14px)); }
   .call-header { padding-top: max(50px, calc(env(safe-area-inset-top) + 14px)); }
 }
@@ -549,8 +571,10 @@ select.settings-input { cursor: pointer; }
   <div id="screen-contact-detail" class="screen">
     <div class="contact-detail-header">
       <div class="contact-back" onclick="showScreen('screen-contacts')">‹ 返回</div>
+      <div id="contact-delete-btn" onclick="deleteContact()"
+        style="display:none;position:absolute;right:20px;top:50px;font-size:15px;color:var(--color-danger);cursor:pointer;padding:4px;">刪除</div>
       <div class="contact-detail-avatar" id="detail-avatar" onclick="openAvatarPicker('contact')">
-        <span id="detail-avatar-content">🌙</span>
+        <div id="detail-avatar-content" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;">🌙</div>
         <div class="avatar-edit-hint">更換</div>
       </div>
       <div class="contact-detail-name" id="detail-display-name">聯絡人</div>
@@ -776,6 +800,36 @@ select.settings-input { cursor: pointer; }
           <input type="range" id="glass-light-slider" min="0" max="100" value="0"
             style="width:90px;" oninput="applyGlassEffect()" />
           <span id="glass-light-val" style="font-size:12px;color:var(--color-text-dim);min-width:24px;text-align:right;">0</span>
+        </div>
+      </div>
+
+      <!-- 玻璃效果實時預覽 -->
+      <div class="settings-section-title" style="margin-top:16px;">玻璃效果預覽</div>
+      <div id="glass-preview-area" style="
+        border-radius: var(--radius-card);
+        padding: 16px 12px;
+        margin-bottom: 4px;
+        position: relative;
+        overflow: hidden;
+        min-height: 110px;
+        background: linear-gradient(135deg, #7b6ef6 0%, #5ec9a0 50%, #e87aa0 100%);
+        display: flex; flex-direction: column; gap: 10px;
+      ">
+        <!-- 假背景說明 -->
+        <div style="position:absolute;bottom:6px;right:10px;font-size:10px;color:rgba(255,255,255,0.5);">預覽背景</div>
+        <!-- 模擬 app icon 列 -->
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <div class="glass-preview-icon">📞<div class="glass-preview-label">電話</div></div>
+          <div class="glass-preview-icon">🎨<div class="glass-preview-label">主題</div></div>
+          <div class="glass-preview-icon">👤<div class="glass-preview-label">聯絡人</div></div>
+          <div class="glass-preview-icon">⚙️<div class="glass-preview-label">設定</div></div>
+        </div>
+        <!-- 模擬 dock -->
+        <div class="glass-preview-dock">
+          <div class="glass-preview-icon">📞<div class="glass-preview-label">電話</div></div>
+          <div class="glass-preview-icon">🕐<div class="glass-preview-label">紀錄</div></div>
+          <div class="glass-preview-icon">👤<div class="glass-preview-label">聯絡人</div></div>
+          <div class="glass-preview-icon">⚙️<div class="glass-preview-label">設定</div></div>
         </div>
       </div>
 
@@ -1292,79 +1346,135 @@ function updateClock() {
 
 // 農曆計算（簡易版，精確到2060年）
 function getLunarDate(date) {
-  const lunarInfo = [
-    0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
-    0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
-    0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
-    0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
-    0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
-    0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0,
-    0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
-    0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b6a0,0x195a6,
-    0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,
-    0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06aa0,0x0a6b6,0x056a0,0x02b60,0x09570,
-    0x052b2,0x04970,0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,
-    0x1c8d7,0x0c950,0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2
+  // 春節日期表（農曆正月初一對應公曆），1900-2100
+  // 格式：[月, 日]，年份 = 1900 + index
+  const springFestival = [
+    [1,31],[2,19],[2,8],[1,29],[2,16],[2,4],[1,25],[2,13],[2,2],[1,22],  // 1900-1909
+    [2,10],[1,30],[2,18],[2,6],[1,26],[2,14],[2,3],[1,23],[2,11],[2,1],  // 1910-1919
+    [2,20],[2,8],[1,28],[2,16],[2,5],[1,25],[2,13],[2,2],[1,23],[2,10],  // 1920-1929
+    [1,30],[2,17],[2,6],[1,26],[2,14],[2,4],[1,24],[2,11],[1,31],[2,19], // 1930-1939
+    [2,8],[1,27],[2,15],[2,5],[1,25],[2,13],[2,2],[1,22],[2,10],[1,29],  // 1940-1949
+    [2,17],[2,6],[1,27],[2,14],[2,3],[1,24],[2,12],[1,31],[2,18],[2,8],  // 1950-1959
+    [1,28],[2,15],[2,5],[1,25],[2,13],[2,2],[1,21],[2,9],[1,30],[2,17],  // 1960-1969
+    [2,6],[1,27],[2,15],[2,3],[1,23],[2,11],[1,31],[2,18],[2,7],[1,28],  // 1970-1979
+    [2,16],[2,5],[1,25],[2,13],[2,2],[2,20],[2,9],[1,29],[2,17],[2,6],   // 1980-1989
+    [1,27],[2,15],[2,4],[1,23],[2,10],[1,31],[2,19],[2,7],[1,28],[2,16], // 1990-1999
+    [2,5],[1,24],[2,12],[2,1],[1,22],[2,9],[1,29],[2,18],[2,7],[1,26],   // 2000-2009
+    [2,14],[2,3],[1,23],[2,10],[1,31],[2,19],[2,8],[1,28],[2,16],[2,5],  // 2010-2019
+    [1,25],[2,12],[2,1],[1,22],[2,10],[1,29],[2,17],[2,6],[1,26],[2,13], // 2020-2029
+    [2,3],[1,23],[2,11],[1,31],[2,19],[2,8],[1,28],[2,15],[2,4],[1,24],  // 2030-2039
+    [2,12],[2,1],[1,22],[2,10],[1,30],[2,17],[2,6],[1,26],[2,14],[2,3],  // 2040-2049
   ];
-  const heavenly = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
-  const earthly  = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  // 閏月表：值=閏月月份(0=無閏月), index = 年份-1900
+  const leapMonths = [
+    8,0,6,0,0,5,0,0,4,0, // 1900-1909
+    2,0,6,0,0,3,0,7,0,0, // 1910-1919
+    5,0,0,4,0,9,0,0,2,0, // 1920-1929
+    6,0,0,5,0,0,3,0,7,0, // 1930-1939
+    0,6,0,0,4,0,0,2,0,7, // 1940-1949
+    0,0,5,0,0,3,0,8,0,0, // 1950-1959
+    6,0,0,4,0,0,3,0,7,0, // 1960-1969
+    0,5,0,0,4,0,8,0,0,6, // 1970-1979
+    0,0,4,0,10,0,0,6,0,0, // 1980-1989
+    5,0,0,3,0,8,0,0,5,0, // 1990-1999
+    0,4,0,0,2,0,7,0,0,5, // 2000-2009
+    0,0,4,0,9,0,0,6,0,0, // 2010-2019
+    4,0,0,2,0,6,0,0,5,0, // 2020-2029
+    0,3,0,7,0,0,6,0,0,4, // 2030-2039
+    0,0,2,0,6,0,0,5,0,0, // 2040-2049
+  ];
+  // 各農曆月天數：30大29小，以 bit 紀錄，bit11=1月...bit0=12月，1=大月30天
+  const monthBig = [
+    0b101011010101,0b010101011010,0b101010101101,0b010010101011,0b010101010101, // 1900-1904
+    0b101010101010,0b110101010100,0b010110101010,0b101010110101,0b010010110110, // 1905-1909
+    0b100101011011,0b010010101011,0b010101010101,0b011010101001,0b101101010100, // 1910-1914
+    0b010101101010,0b101010101101,0b010100101101,0b010010010111,0b001001001011, // 1915-1919
+    0b010100101011,0b010101010101,0b011010100101,0b101101010010,0b101101101010, // 1920-1924
+    0b010101101101,0b001010101110,0b100100101011,0b010010010101,0b101010101010, // 1925-1929
+    0b110101010100,0b010110101010,0b101010110101,0b010010101011,0b100100101011, // 1930-1934
+    0b010010101011,0b010101010101,0b011010100101,0b101011010010,0b101011101001, // 1935-1939
+    0b010101101010,0b101010101101,0b010100010111,0b001001001011,0b010010101011, // 1940-1944
+    0b010101010101,0b010110101001,0b011010110010,0b101010111010,0b010010101011, // 1945-1949
+    0b100101010101,0b101010101001,0b110101010100,0b011011010010,0b101011101001, // 1950-1954
+    0b010101101010,0b101001011011,0b010010011011,0b001001010101,0b101010101001, // 1955-1959
+    0b101101010100,0b010111010100,0b101011101010,0b010101101101,0b001010110110, // 1960-1964
+    0b100100110111,0b001001010011,0b010101001011,0b010110100101,0b011011010010, // 1965-1969
+    0b101101101001,0b010110101100,0b101010101101,0b010100100111,0b001010010111, // 1970-1974
+    0b001001010101,0b010101010101,0b011010101010,0b101101010101,0b001101101010, // 1975-1979
+    0b010101101101,0b001010101011,0b010010101011,0b100010100101,0b101010101010, // 1980-1984
+    0b110101010010,0b110110101001,0b010111010100,0b101011011010,0b010101011101, // 1985-1989
+    0b001010011101,0b001001010111,0b010010100101,0b011010010101,0b101101010010, // 1990-1994
+    0b101110101001,0b001011010100,0b100101011011,0b010010101011,0b001001010101, // 1995-1999
+    0b011010101000,0b101101010100,0b010110110010,0b100110111001,0b010010110101, // 2000-2004
+    0b101001101011,0b010100101011,0b010101010011,0b011010010101,0b101101001010, // 2005-2009
+    0b101101100101,0b010101101100,0b100101011101,0b010010011101,0b001001001101, // 2010-2014
+    0b010100100101,0b011010010010,0b101110010010,0b010110101001,0b101010110101, // 2015-2019
+    0b010010110110,0b100001011011,0b010001010101,0b101010101001,0b101101010100, // 2020-2024
+    0b010110110010,0b100110110101,0b010010110110,0b101001011011,0b010100101011, // 2025-2029
+    0b010101010101,0b011001010010,0b101110010001,0b010111010100,0b101010111010, // 2030-2034
+    0b010100101111,0b001001001011,0b010010010101,0b101010010101,0b110101010010, // 2035-2039
+    0b110110101000,0b101011101010,0b010101101011,0b001010101011,0b010010011011, // 2040-2044
+    0b010001010101,0b011010100101,0b011101010010,0b101101101001,0b010101101100, // 2045-2049
+  ];
+
+  const heavenly    = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  const earthly     = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
   const lunarMonths = ['正','二','三','四','五','六','七','八','九','十','冬','臘'];
   const lunarDays   = ['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十',
                        '十一','十二','十三','十四','十五','十六','十七','十八','十九','二十',
                        '廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
 
-  const baseDate = new Date(1900, 0, 31);
-  const offset = Math.floor((date - baseDate) / 86400000);
-  let lunarYear = 1900, lunarMonth = 1, lunarDay = 1;
-  let i, temp = 0, isLeap = false;
+  const y = date.getFullYear();
+  const sfIdx = y - 1900;
+  if (sfIdx < 0 || sfIdx >= springFestival.length) return '';
 
-  for (i = 1900; i < 2100 && temp < offset; i++) {
-    const daysOfYear = lDays(i);
-    temp += daysOfYear;
+  // 今年春節
+  const sf = springFestival[sfIdx];
+  const sfDate = new Date(y, sf[0]-1, sf[1]);
+  let diff = Math.floor((date - sfDate) / 86400000);
+
+  let lunarYear = y;
+  // 如果在春節前，屬於上一個農曆年
+  if (diff < 0) {
+    lunarYear = y - 1;
+    const sfPrev = springFestival[lunarYear - 1900];
+    const sfPrevDate = new Date(lunarYear, sfPrev[0]-1, sfPrev[1]);
+    diff = Math.floor((date - sfPrevDate) / 86400000);
   }
-  if (temp > offset) { i--; temp -= lDays(i); }
-  lunarYear = i;
 
-  let daysOfLeap = leapDays(i);
-  let leapMonth = leapM(i);
-  let remain = offset - temp;
+  const lyIdx = lunarYear - 1900;
+  const leap  = leapMonths[lyIdx] || 0;
+  const bits  = monthBig[lyIdx] || 0;
 
-  for (i = 1; i < 13 && remain > 0; i++) {
-    if (leapMonth > 0 && i === leapMonth + 1 && !isLeap) {
-      i--; isLeap = true; temp = daysOfLeap;
-    } else {
-      temp = monthDays(lunarYear, i);
+  // 各月天數（含閏月）
+  let months = [];
+  for (let m = 1; m <= 12; m++) {
+    const big = (bits >> (12 - m)) & 1;
+    months.push({ month: m, days: big ? 30 : 29, isLeap: false });
+    if (m === leap) {
+      // 閏月固定29天（簡化；若需精確可查表）
+      months.push({ month: m, days: 29, isLeap: true });
     }
-    if (isLeap && i === leapMonth + 1) isLeap = false;
-    remain -= temp;
   }
-  if (remain === 0 && leapMonth > 0 && i === leapMonth + 1) {
-    if (isLeap) { isLeap = false; } else { isLeap = true; i--; }
+
+  let remain = diff;
+  let lunarMonth = 1, lunarDay = 1, isLeapMonth = false;
+  for (const mo of months) {
+    if (remain < mo.days) {
+      lunarMonth  = mo.month;
+      lunarDay    = remain + 1;
+      isLeapMonth = mo.isLeap;
+      break;
+    }
+    remain -= mo.days;
   }
-  if (remain < 0) { remain += temp; i--; }
-  lunarMonth = i;
-  lunarDay = remain + 1;
 
-  const cyclicalYear = (lunarYear - 4) % 60;
-  const yearName = heavenly[cyclicalYear % 10] + earthly[cyclicalYear % 12] + '年';
-  const monthName = lunarMonths[lunarMonth - 1] + '月';
-  const dayName = lunarDays[lunarDay - 1];
-
+  const cyclical = (lunarYear - 4) % 60;
+  const yearName  = heavenly[cyclical % 10] + earthly[cyclical % 12] + '年';
+  const monthName = (isLeapMonth ? '閏' : '') + lunarMonths[lunarMonth - 1] + '月';
+  const dayName   = lunarDays[lunarDay - 1];
   return yearName + monthName + dayName;
-
-  function leapM(y) { return lunarInfo[y-1900] & 0xf; }
-  function leapDays(y) {
-    if (leapM(y)) return (lunarInfo[y-1900] & 0x10000) ? 30 : 29;
-    return 0;
-  }
-  function monthDays(y, m) { return (lunarInfo[y-1900] & (0x10000 >> m)) ? 30 : 29; }
-  function lDays(y) {
-    let s = 348;
-    for (let i = 0x8000; i > 0x8; i >>= 1) s += (lunarInfo[y-1900] & i) ? 1 : 0;
-    return s + leapDays(y);
-  }
 }
-
 function updateHomeGreeting() { /* removed */ }
 function updateHomeMyAvatar() { /* removed */ }
 
@@ -1901,7 +2011,8 @@ function showAddContact() {
   document.getElementById('field-system').value='';
   document.getElementById('field-tone').value='';
   document.getElementById('detail-display-name').textContent='新聯絡人';
-  document.getElementById('detail-avatar-content').textContent='👤';
+  document.getElementById('detail-avatar-content').innerHTML = '👤';
+  document.getElementById('contact-delete-btn').style.display = 'none';
   showScreen('screen-contact-detail');
 }
 
@@ -1918,28 +2029,60 @@ function openContactDetail(c) {
   document.getElementById('detail-display-name').textContent = c.nickname||c.name;
   const ac = document.getElementById('detail-avatar-content');
   if (c.avatarData||c.avatarUrl) {
-    ac.innerHTML = `<img src="${c.avatarData||c.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-  } else { ac.textContent = c.emoji||'👤'; }
+    ac.innerHTML = `<img src="${c.avatarData||c.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  } else {
+    ac.innerHTML = c.emoji||'👤';
+  }
+  document.getElementById('contact-delete-btn').style.display = 'block';
   showScreen('screen-contact-detail');
 }
 
 function saveContact() {
-  const name = document.getElementById('field-name').value.trim()||'未命名';
+  const name     = document.getElementById('field-name').value.trim()||'未命名';
   const nickname = document.getElementById('field-nickname').value.trim()||name;
-  const emoji = document.getElementById('field-emoji').value.trim()||'👤';
-  const avatarUrl = document.getElementById('field-avatar-url').value.trim();
-  const avatarData = state._pendingContactAvatarData||'';
-  const system = document.getElementById('field-system').value.trim();
-  const tone = document.getElementById('field-tone').value.trim();
-  const obj = {name,nickname,emoji,avatarUrl,avatarData,system,tone};
-  if (state.editingContactId) {
-    const idx = state.contacts.findIndex(c=>c.id===state.editingContactId);
-    if(idx>=0) state.contacts[idx]={...state.contacts[idx],...obj};
-  } else {
-    state.contacts.push({id:Date.now().toString(),...obj});
+  const emoji    = document.getElementById('field-emoji').value.trim()||'👤';
+  const avatarUrl= document.getElementById('field-avatar-url').value.trim();
+  const system   = document.getElementById('field-system').value.trim();
+  const tone     = document.getElementById('field-tone').value.trim();
+
+  // 有新上傳的圖就用新的，沒有就保留原本已存的 avatarData
+  let avatarData = '';
+  if (state._pendingContactAvatarData) {
+    avatarData = state._pendingContactAvatarData;
+  } else if (state.editingContactId) {
+    const existing = state.contacts.find(c => c.id === state.editingContactId);
+    avatarData = existing?.avatarData || '';
   }
-  state.contact = state.contacts.find(c=>c.id===(state.editingContactId||state.contacts[state.contacts.length-1].id));
-  saveAll(); renderContacts(); showScreen('screen-contacts');
+
+  const obj = {name, nickname, emoji, avatarUrl, avatarData, system, tone};
+  if (state.editingContactId) {
+    const idx = state.contacts.findIndex(c => c.id === state.editingContactId);
+    if (idx >= 0) state.contacts[idx] = {...state.contacts[idx], ...obj};
+  } else {
+    state.contacts.push({id: Date.now().toString(), ...obj});
+  }
+  state.contact = state.contacts.find(c => c.id === (state.editingContactId || state.contacts[state.contacts.length-1].id));
+  saveAll();
+  renderContacts();
+  renderThemeCallInline();
+  showScreen('screen-contacts');
+}
+
+function deleteContact() {
+  if (!state.editingContactId) return;
+  const c = state.contacts.find(c => c.id === state.editingContactId);
+  const name = c?.nickname || c?.name || '這位聯絡人';
+  confirmDelete(`確定刪除「${name}」？\n刪除後無法復原。`, () => {
+    state.contacts = state.contacts.filter(c => c.id !== state.editingContactId);
+    // 如果刪的是目前通話對象，換成第一個
+    if (state.contact?.id === state.editingContactId) {
+      state.contact = state.contacts[0] || null;
+    }
+    saveAll();
+    renderContacts();
+    renderThemeCallInline();
+    showScreen('screen-contacts');
+  });
 }
 
 // ============ CALL LOG ============
@@ -2441,6 +2584,8 @@ function applyGlassStyle(blur, opacity, shadow, light) {
       }`
     : '';
   document.getElementById('home-custom-style').textContent = css;
+  // 同步更新預覽區塊
+  updateGlassPreview(blur, op, outerShadow, boxShadow, borderTop, borderLeft, borderBottom, borderRight, topLeftA, glassDock);
 }
 
 function isColorDark(hex) {
@@ -2450,6 +2595,35 @@ function isColorDark(hex) {
   const g = parseInt(hex.slice(2,4),16);
   const b = parseInt(hex.slice(4,6),16);
   return (r*299 + g*587 + b*114) / 1000 < 128;
+}
+
+function updateGlassPreview(blur, op, outerShadow, boxShadow, borderTop, borderLeft, borderBottom, borderRight, topLeftA, glassDock) {
+  const icons = document.querySelectorAll('.glass-preview-icon');
+  const dock  = document.querySelector('.glass-preview-dock');
+  if (!icons.length) return;
+
+  const bg = op < 1
+    ? `rgba(255,255,255,${op.toFixed(2)})`
+    : 'rgba(255,255,255,0.25)';
+  const filterVal = blur > 0 ? `blur(${blur}px)` : 'none';
+
+  icons.forEach(icon => {
+    icon.style.background       = bg;
+    icon.style.backdropFilter   = filterVal;
+    icon.style.webkitBackdropFilter = filterVal;
+    icon.style.boxShadow        = boxShadow !== 'none' ? boxShadow : '';
+    icon.style.borderTop        = borderTop;
+    icon.style.borderLeft       = borderLeft;
+    icon.style.borderBottom     = borderBottom;
+    icon.style.borderRight      = borderRight;
+  });
+  if (dock) {
+    dock.style.background           = glassDock;
+    dock.style.backdropFilter       = filterVal;
+    dock.style.webkitBackdropFilter = filterVal;
+    dock.style.boxShadow            = outerShadow || '';
+    dock.style.borderColor          = `rgba(255,255,255,${topLeftA})`;
+  }
 }
 
 function applyGlassBlurStyle(val) {
