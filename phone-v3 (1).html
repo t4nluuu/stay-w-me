@@ -1,0 +1,2211 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>陪伴手機</title>
+<style>
+/* =====================
+   CSS 變數 — 主題在這裡改
+   ===================== */
+:root {
+  --color-bg:           #0a0a0f;
+  --color-surface:      #13131a;
+  --color-surface-2:    #1c1c26;
+  --color-border:       #2a2a3a;
+  --color-accent:       #7b6ef6;
+  --color-accent-dim:   #3d3780;
+  --color-text:         #f0f0f8;
+  --color-text-dim:     #8888aa;
+  --color-text-muted:   #55556a;
+  --color-danger:       #e05555;
+  --color-green:        #4caf7d;
+  --radius-phone:       40px;
+  --radius-btn:         50%;
+  --radius-bubble:      18px;
+  --radius-card:        16px;
+  --radius-input:       24px;
+  --font-main: -apple-system, 'Helvetica Neue', sans-serif;
+  --phone-w: 390px;
+  --phone-h: 844px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-main);
+  background: #06060c;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; overflow: hidden;
+}
+#phone {
+  width: var(--phone-w); height: var(--phone-h);
+  background: var(--color-bg);
+  border-radius: var(--radius-phone);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 40px 120px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.06);
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+#phone::before {
+  content: ''; position: absolute;
+  top: 0; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 34px;
+  background: #000; border-radius: 0 0 20px 20px; z-index: 100;
+}
+.status-bar {
+  height: 44px; padding: 14px 28px 0;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; font-weight: 600; color: var(--color-text);
+  flex-shrink: 0; z-index: 10; position: relative;
+}
+.status-bar .time-display { font-size: 15px; font-weight: 600; }
+.status-icons { display: flex; gap: 6px; align-items: center; }
+.status-icons svg { width: 16px; height: 12px; fill: var(--color-text); }
+
+.screen { position: absolute; inset: 0; display: none; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ---- LOCK ---- */
+#screen-lock {
+  background: linear-gradient(160deg, #0d0d1a 0%, #0a0a14 60%, #0f0a1a 100%);
+  align-items: center; justify-content: space-between;
+  padding: 60px 0 50px; user-select: none;
+  overflow: hidden; position: absolute; inset: 0;
+  transition: transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
+}
+.lock-time { text-align: center; color: var(--color-text); }
+.lock-time .hour { font-size: 80px; font-weight: 200; letter-spacing: -2px; line-height: 1; }
+.lock-time .date-label { font-size: 16px; color: var(--color-text-dim); margin-top: 6px; }
+.lock-notification {
+  background: rgba(255,255,255,.07); backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,.1); border-radius: var(--radius-card);
+  margin: 0 24px; padding: 14px 16px; display: none;
+}
+.lock-notification.visible { display: block; }
+.lock-notif-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.lock-notif-dot { width: 8px; height: 8px; background: var(--color-accent); border-radius: 50%; }
+.lock-notif-app { font-size: 12px; color: var(--color-text-dim); }
+.lock-notif-title { font-size: 15px; font-weight: 600; color: var(--color-text); }
+.lock-notif-body { font-size: 13px; color: var(--color-text-dim); margin-top: 2px; }
+.lock-swipe-hint { text-align: center; color: var(--color-text-muted); font-size: 14px; letter-spacing: .5px; padding-bottom: 10px; }
+.swipe-line { width: 40px; height: 4px; background: rgba(255,255,255,.2); border-radius: 2px; margin: 8px auto 0; }
+
+/* ---- HOME ---- */
+#screen-home { background: var(--color-bg); flex-direction: column; padding-top: 44px; }
+/* iPhone-style app grid */
+.home-app-area {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 10px;
+  padding: 20px 16px 12px;
+  position: relative;
+  margin-top: 8px;
+}
+.home-dock-wrap {
+  padding: 10px 16px 16px;
+  flex-shrink: 0;
+}
+.home-dock {
+  background: rgba(128,128,128,.18);
+  border: 1px solid rgba(128,128,128,.25);
+  border-radius: 24px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.app-icon {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  cursor: pointer; border-radius: 16px; padding: 4px 2px;
+  position: relative; user-select: none;
+  transition: transform .1s;
+}
+.app-icon:active { transform: scale(.92); }
+.app-icon.dragging { opacity: .85; z-index: 50; pointer-events: none; }
+.app-icon.drag-over { background: rgba(255,255,255,.08); }
+.app-icon-box {
+  width: 60px; height: 60px; border-radius: 16px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+.app-icon-label {
+  font-size: 11px; color: var(--color-text); text-align: center;
+  width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.app-icon.wiggle .app-icon-box {
+  animation: wiggle .35s infinite alternate;
+}
+@keyframes wiggle {
+  0% { transform: rotate(-2deg); }
+  100% { transform: rotate(2deg); }
+}
+.app-delete-btn {
+  position: absolute; top: -2px; left: 6px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #444; color: white; font-size: 12px; line-height: 18px;
+  text-align: center; display: none; z-index: 60;
+}
+.edit-mode .app-icon .app-delete-btn { display: block; }
+/* empty slot placeholder */
+.app-slot { position: relative; }
+
+
+/* ---- INCOMING ---- */
+#screen-incoming {
+  background: linear-gradient(160deg, #0e0e1c 0%, #0a0a14 100%);
+  align-items: center; justify-content: space-between; padding: 80px 40px 60px;
+}
+.incoming-avatar {
+  width: 100px; height: 100px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dim));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px; color: white; margin: 0 auto 16px;
+  box-shadow: 0 0 40px rgba(123,110,246,.4);
+  overflow: hidden;
+}
+.incoming-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.incoming-name { font-size: 32px; font-weight: 600; color: var(--color-text); text-align: center; }
+.incoming-status { font-size: 16px; color: var(--color-text-dim); text-align: center; margin-top: 6px; }
+.incoming-actions { display: flex; justify-content: space-around; width: 100%; align-items: center; }
+.call-action-btn { display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; }
+.call-action-btn .btn-circle {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; transition: transform .1s;
+}
+.call-action-btn:active .btn-circle { transform: scale(.94); }
+.btn-reject { background: var(--color-danger); }
+.btn-accept { background: var(--color-green); }
+.call-action-label { font-size: 13px; color: var(--color-text-dim); }
+
+/* ---- OUTGOING ---- */
+#screen-outgoing {
+  background: linear-gradient(160deg, #0d0d1c 0%, #0a0a12 100%);
+  align-items: center; justify-content: space-between; padding: 80px 40px 60px;
+}
+.outgoing-avatar {
+  width: 100px; height: 100px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dim));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px; color: white; margin: 0 auto 16px;
+  box-shadow: 0 0 40px rgba(123,110,246,.3);
+  animation: pulse 2s infinite; overflow: hidden;
+}
+.outgoing-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+@keyframes pulse { 0%,100%{box-shadow:0 0 40px rgba(123,110,246,.3)} 50%{box-shadow:0 0 60px rgba(123,110,246,.5)} }
+.outgoing-name { font-size: 32px; font-weight: 600; color: var(--color-text); text-align: center; }
+.outgoing-status { font-size: 16px; color: var(--color-text-dim); text-align: center; margin-top: 6px; }
+.outgoing-cancel-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.outgoing-cancel-wrap .btn-circle { width: 72px; height: 72px; border-radius: 50%; background: var(--color-danger); display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; }
+
+/* ---- CALL ---- */
+#screen-call { background: linear-gradient(160deg, #0d0d1c 0%, #0a0a12 100%); }
+.call-header { padding: 50px 32px 16px; text-align: center; flex-shrink: 0; }
+.call-contact-name { font-size: 26px; font-weight: 700; color: var(--color-text); letter-spacing: -.3px; }
+.call-timer { font-size: 14px; color: var(--color-text-dim); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.chat-area { flex: 1; overflow-y: auto; padding: 12px 20px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
+.chat-area::-webkit-scrollbar { display: none; }
+.bubble { max-width: 78%; padding: 10px 14px; border-radius: var(--radius-bubble); font-size: 15px; line-height: 1.5; word-break: break-word; }
+.bubble.them { background: var(--color-surface-2); color: var(--color-text); border-bottom-left-radius: 4px; align-self: flex-start; }
+.bubble.me { background: var(--color-accent); color: white; border-bottom-right-radius: 4px; align-self: flex-end; }
+.bubble.system { background: transparent; color: var(--color-text-muted); font-size: 12px; text-align: center; align-self: center; padding: 4px 0; }
+.typing-dots { display: flex; gap: 4px; align-items: center; height: 18px; }
+.typing-dots span { width: 7px; height: 7px; background: var(--color-text-muted); border-radius: 50%; animation: blink 1.2s infinite; }
+.typing-dots span:nth-child(2) { animation-delay: .2s; }
+.typing-dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%,80%,100%{opacity:.3} 40%{opacity:1} }
+.chat-input-area { padding: 12px 16px; display: flex; gap: 10px; align-items: flex-end; border-top: 1px solid var(--color-border); flex-shrink: 0; }
+.chat-input { flex: 1; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-input); padding: 10px 16px; color: var(--color-text); font-size: 15px; font-family: var(--font-main); resize: none; outline: none; max-height: 100px; line-height: 1.4; }
+.chat-input::placeholder { color: var(--color-text-muted); }
+.send-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--color-accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity .15s; }
+.send-btn:disabled { opacity: .4; cursor: default; }
+.send-btn svg { width: 18px; height: 18px; fill: white; }
+.call-btns-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 16px 32px 32px; flex-shrink: 0; }
+.call-btn { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
+.call-btn .btn-circle { width: 64px; height: 64px; border-radius: var(--radius-btn); background: var(--color-surface-2); display: flex; align-items: center; justify-content: center; font-size: 22px; transition: transform .1s, background .15s; border: 1px solid var(--color-border); }
+.call-btn:active .btn-circle { transform: scale(.92); }
+.call-btn.end-btn .btn-circle { background: var(--color-danger); border-color: transparent; }
+.call-btn.spotify-btn .btn-circle { background: #1a3a1a; border-color: #1db954; }
+.call-btn.active .btn-circle { background: var(--color-surface); border-color: var(--color-accent); }
+.call-btn-label { font-size: 12px; color: var(--color-text-dim); }
+
+/* ---- SPOTIFY PANEL ---- */
+.spotify-panel { background: var(--color-surface); border: 1px solid #1db954; border-radius: var(--radius-card); padding: 16px; margin: 0 16px; flex-shrink: 0; }
+.spotify-panel.hidden { display: none; }
+.spotify-panel-title { font-size: 13px; color: #1db954; margin-bottom: 10px; font-weight: 600; }
+.spotify-search { display: flex; gap: 8px; }
+.spotify-search input { flex: 1; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 8px; padding: 8px 12px; color: var(--color-text); font-size: 14px; font-family: var(--font-main); outline: none; }
+.spotify-search button { background: #1db954; color: white; border: none; border-radius: 8px; padding: 8px 14px; font-size: 14px; cursor: pointer; }
+.spotify-results { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 120px; overflow-y: auto; }
+.spotify-track { background: var(--color-surface-2); border-radius: 8px; padding: 8px 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.spotify-track:active { opacity: .7; }
+.spotify-track-info { flex: 1; overflow: hidden; }
+.spotify-track-name { font-size: 13px; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spotify-track-artist { font-size: 11px; color: var(--color-text-dim); }
+.spotify-now-playing { margin-top: 10px; font-size: 12px; color: var(--color-text-dim); display: none; }
+.spotify-now-playing.visible { display: block; }
+
+/* ---- SHARED SCREEN STYLES ---- */
+.screen-header { padding: 50px 24px 16px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.back-btn { font-size: 16px; color: var(--color-accent); cursor: pointer; padding: 4px; }
+.screen-title { font-size: 20px; font-weight: 700; color: var(--color-text); }
+
+/* ---- CONTACTS ---- */
+#screen-contacts { background: var(--color-bg); }
+.contact-item { display: flex; align-items: center; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--color-border); cursor: pointer; }
+.contact-item:active { background: var(--color-surface); }
+.contact-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dim)); display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; flex-shrink: 0; overflow: hidden; }
+.contact-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.contact-info .name { font-size: 16px; font-weight: 600; color: var(--color-text); }
+.contact-info .note { font-size: 13px; color: var(--color-text-dim); margin-top: 2px; }
+.no-contact { text-align: center; color: var(--color-text-muted); padding: 60px 24px; font-size: 14px; }
+
+/* ---- CONTACT DETAIL ---- */
+#screen-contact-detail { background: var(--color-bg); }
+.contact-detail-header { padding: 50px 24px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; flex-shrink: 0; position: relative; }
+.contact-detail-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dim)); display: flex; align-items: center; justify-content: center; font-size: 32px; color: white; cursor: pointer; overflow: hidden; position: relative; }
+.contact-detail-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-edit-hint { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,.5); font-size: 10px; color: white; text-align: center; padding: 3px 0; border-radius: 0 0 50% 50%; }
+.contact-detail-name { font-size: 24px; font-weight: 700; color: var(--color-text); }
+.contact-back { position: absolute; left: 20px; top: 50px; font-size: 16px; color: var(--color-accent); cursor: pointer; padding: 4px; }
+.contact-call-btn { background: var(--color-green); color: white; border: none; border-radius: 20px; padding: 10px 32px; font-size: 16px; cursor: pointer; margin-top: 4px; }
+.field-group { padding: 0 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 0; }
+.field-row { padding: 14px 0; border-bottom: 1px solid var(--color-border); display: flex; flex-direction: column; gap: 4px; }
+.field-label { font-size: 12px; color: var(--color-text-muted); }
+.field-value { font-size: 15px; color: var(--color-text); background: none; border: none; outline: none; font-family: var(--font-main); width: 100%; padding: 0; }
+textarea.field-value { resize: none; min-height: 60px; line-height: 1.5; }
+.field-url-row { display: flex; gap: 8px; align-items: center; }
+.field-url-row input { flex: 1; }
+.field-url-row button { background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text); padding: 6px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.save-btn { background: var(--color-accent); color: white; border: none; border-radius: var(--radius-card); padding: 14px; font-size: 16px; font-weight: 600; cursor: pointer; margin: 16px 24px; flex-shrink: 0; }
+
+/* ---- CALL LOG ---- */
+#screen-log { background: var(--color-bg); }
+.log-list { flex: 1; overflow-y: auto; }
+.log-item { display: flex; align-items: center; gap: 14px; padding: 14px 24px; border-bottom: 1px solid var(--color-border); }
+.log-icon { font-size: 20px; }
+.log-info { flex: 1; }
+.log-name { font-size: 15px; font-weight: 600; color: var(--color-text); }
+.log-meta { font-size: 12px; color: var(--color-text-dim); margin-top: 2px; }
+.log-duration { font-size: 13px; color: var(--color-text-muted); }
+.no-log { text-align: center; color: var(--color-text-muted); padding: 60px 24px; font-size: 14px; }
+
+/* ---- SETTINGS ---- */
+#screen-settings { background: var(--color-bg); }
+.settings-list { flex: 1; overflow-y: auto; padding: 0 24px 24px; }
+.settings-section { margin-top: 24px; }
+.settings-section-title { font-size: 12px; color: var(--color-text-muted); margin-bottom: 8px; letter-spacing: .5px; }
+.settings-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--color-border); }
+.settings-item-left { display: flex; flex-direction: column; gap: 3px; }
+.settings-item-label { font-size: 15px; color: var(--color-text); }
+.settings-item-sub { font-size: 12px; color: var(--color-text-dim); }
+.settings-input { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 8px 12px; color: var(--color-text); font-size: 14px; font-family: var(--font-main); width: 100%; margin-top: 6px; outline: none; }
+select.settings-input { cursor: pointer; }
+.toggle { width: 50px; height: 28px; background: var(--color-surface-2); border-radius: 14px; position: relative; cursor: pointer; border: 1px solid var(--color-border); transition: background .2s; flex-shrink: 0; }
+.toggle.on { background: var(--color-accent); border-color: var(--color-accent); }
+.toggle::after { content: ''; position: absolute; width: 22px; height: 22px; border-radius: 50%; background: white; top: 2px; left: 2px; transition: left .2s; }
+.toggle.on::after { left: 24px; }
+.settings-btn { width: 100%; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); color: var(--color-text); padding: 13px; font-size: 15px; cursor: pointer; margin-top: 10px; font-family: var(--font-main); }
+.settings-btn.danger { color: var(--color-danger); border-color: var(--color-danger); background: rgba(224,85,85,.08); }
+.settings-btn.accent { background: var(--color-accent); color: white; border-color: transparent; }
+.model-row { display: flex; gap: 8px; margin-top: 6px; }
+.model-row input { flex: 1; }
+.model-row button { background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-accent); padding: 8px 12px; font-size: 13px; cursor: pointer; white-space: nowrap; font-family: var(--font-main); }
+.api-profile-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.api-profile-item { background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.api-profile-item.active-profile { border-color: var(--color-accent); }
+.api-profile-name { font-size: 14px; color: var(--color-text); }
+.api-profile-meta { font-size: 11px; color: var(--color-text-dim); margin-top: 2px; }
+.api-profile-actions { display: flex; gap: 8px; }
+.api-profile-actions button { background: none; border: none; font-size: 14px; cursor: pointer; padding: 2px; }
+
+/* ---- THEME SCREEN ---- */
+#screen-theme { background: var(--color-bg); }
+.theme-list { flex: 1; overflow-y: auto; padding: 0 24px 24px; }
+.theme-preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.theme-preset { border-radius: var(--radius-card); padding: 14px; cursor: pointer; border: 2px solid transparent; }
+.theme-preset.selected { border-color: var(--color-accent); }
+.theme-preset-name { font-size: 13px; font-weight: 600; color: var(--color-text); margin-top: 8px; }
+.theme-color-dots { display: flex; gap: 4px; }
+.theme-dot { width: 14px; height: 14px; border-radius: 50%; }
+.theme-var-list { display: flex; flex-direction: column; gap: 0; }
+.theme-var-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--color-border); gap: 12px; }
+.theme-var-label { font-size: 14px; color: var(--color-text); flex: 1; }
+.theme-var-sub { font-size: 11px; color: var(--color-text-dim); }
+.theme-var-right { display: flex; align-items: center; gap: 8px; }
+.color-swatch { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--color-border); cursor: pointer; }
+.color-input-hidden { position: absolute; opacity: 0; width: 0; height: 0; }
+.radius-input { width: 60px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: 4px 8px; color: var(--color-text); font-size: 13px; text-align: center; outline: none; }
+.theme-save-row { display: flex; gap: 8px; margin-top: 12px; }
+.theme-save-row input { flex: 1; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 8px 12px; color: var(--color-text); font-size: 14px; outline: none; font-family: var(--font-main); }
+.theme-save-row button { background: var(--color-accent); color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 14px; cursor: pointer; }
+.saved-theme-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.saved-theme-item { background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
+.saved-theme-item.active-theme { border-color: var(--color-accent); }
+.saved-theme-name { font-size: 14px; color: var(--color-text); }
+.saved-theme-actions { display: flex; gap: 8px; }
+.saved-theme-actions button { background: none; border: none; font-size: 14px; cursor: pointer; padding: 2px; color: var(--color-text); }
+
+/* ---- MY PROFILE SCREEN ---- */
+#screen-myprofile { background: var(--color-bg); }
+.my-profile-header { padding: 50px 24px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; flex-shrink: 0; position: relative; }
+.my-profile-back { position: absolute; left: 20px; top: 50px; font-size: 16px; color: var(--color-accent); cursor: pointer; padding: 4px; }
+.my-avatar-large { width: 80px; height: 80px; border-radius: 50%; background: var(--color-surface-2); border: 1px solid var(--color-border); display: flex; align-items: center; justify-content: center; font-size: 32px; cursor: pointer; overflow: hidden; position: relative; }
+.my-avatar-large img { width: 100%; height: 100%; object-fit: cover; }
+
+@media (max-width: 430px) {
+  body { align-items: flex-start; background: var(--color-bg); }
+  #phone { width: 100vw; height: 100dvh; border-radius: 0; border: none; }
+}
+</style>
+<style id="home-custom-style"></style>
+<style id="call-custom-style"></style>
+<style id="bubble-custom-style"></style>
+</head>
+<body>
+<div id="phone">
+  <div class="status-bar">
+    <span class="time-display" id="status-time">12:00</span>
+    <div class="status-icons">
+      <svg viewBox="0 0 24 16"><rect x="0" y="4" width="4" height="12" rx="1"/><rect x="6" y="2" width="4" height="14" rx="1"/><rect x="12" y="0" width="4" height="16" rx="1"/><rect x="18" y="0" width="5" height="16" rx="1" opacity=".3"/></svg>
+      <svg viewBox="0 0 25 12"><rect x="0" y="2" width="22" height="8" rx="2" stroke="white" stroke-width="1.5" fill="none"/><rect x="23" y="4" width="2" height="4" rx="1" fill="white"/><rect x="1.5" y="3.5" width="16" height="5" rx="1" fill="white"/></svg>
+    </div>
+  </div>
+
+  <!-- LOCK -->
+  <div id="screen-lock" class="screen active">
+    <div class="lock-time">
+      <div class="hour" id="lock-time-display">12:00</div>
+      <div class="date-label" id="lock-date-display">星期一 8月31日</div>
+    </div>
+    <div class="lock-notification" id="lock-notification">
+      <div class="lock-notif-header">
+        <div class="lock-notif-dot"></div>
+        <div class="lock-notif-app">陪伴</div>
+      </div>
+      <div class="lock-notif-title">來電</div>
+      <div class="lock-notif-body">點擊解鎖接聽</div>
+    </div>
+    <div class="lock-swipe-hint">向上滑動解鎖<div class="swipe-line"></div></div>
+  </div>
+
+  <!-- HOME -->
+  <div id="screen-home" class="screen">
+    <div class="home-app-area" id="home-app-area"></div>
+    <div class="home-dock-wrap">
+      <div class="home-dock" id="home-dock"></div>
+    </div>
+  </div>
+
+  <!-- INCOMING -->
+  <div id="screen-incoming" class="screen">
+    <div></div>
+    <div>
+      <div class="incoming-avatar" id="incoming-avatar"><span id="incoming-avatar-content">🌙</span></div>
+      <div class="incoming-name" id="incoming-name">言</div>
+      <div class="incoming-status">來電中…</div>
+    </div>
+    <div class="incoming-actions">
+      <div class="call-action-btn" onclick="rejectCall()">
+        <div class="btn-circle btn-reject">📵</div>
+        <div class="call-action-label">拒絕</div>
+      </div>
+      <div class="call-action-btn" onclick="acceptCall()">
+        <div class="btn-circle btn-accept">📞</div>
+        <div class="call-action-label">接聽</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAL PICKER -->
+  <div id="screen-dial-picker" class="screen">
+    <div class="screen-header">
+      <div class="back-btn" onclick="showScreen('screen-home')">‹ 返回</div>
+      <div class="screen-title">撥打電話</div>
+    </div>
+    <div id="dial-picker-list" style="flex:1;overflow-y:auto;"></div>
+  </div>
+
+  <!-- OUTGOING -->
+  <div id="screen-outgoing" class="screen">
+    <div></div>
+    <div>
+      <div class="outgoing-avatar" id="outgoing-avatar"><span id="outgoing-avatar-content">🌙</span></div>
+      <div class="outgoing-name" id="outgoing-name">言</div>
+      <div class="outgoing-status" id="outgoing-status">撥號中…</div>
+    </div>
+    <div class="outgoing-cancel-wrap">
+      <div class="btn-circle" onclick="cancelCall()">📵</div>
+      <div class="call-action-label" style="color:var(--color-text-dim)">取消</div>
+    </div>
+  </div>
+
+  <!-- CALL -->
+  <div id="screen-call" class="screen">
+    <div class="call-header">
+      <div class="call-contact-name" id="call-contact-name">言</div>
+      <div class="call-timer" id="call-timer">00:00</div>
+    </div>
+    <div class="chat-area" id="chat-area"></div>
+    <div class="spotify-panel hidden" id="spotify-panel">
+      <div class="spotify-panel-title">♪ Spotify</div>
+      <div class="spotify-search">
+        <input type="text" id="spotify-search-input" placeholder="搜尋歌曲或藝人…" onkeydown="if(event.key==='Enter')searchSpotify()" />
+        <button onclick="searchSpotify()">搜尋</button>
+      </div>
+      <div class="spotify-results" id="spotify-results"></div>
+      <div class="spotify-now-playing" id="spotify-now-playing"></div>
+    </div>
+    <div class="chat-input-area">
+      <textarea class="chat-input" id="chat-input" placeholder="說點什麼…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="send-btn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+      </button>
+    </div>
+    <div class="call-btns-grid">
+      <div class="call-btn" id="btn-mute" onclick="toggleMute()"><div class="btn-circle">🔇</div><div class="call-btn-label">靜音</div></div>
+      <div class="call-btn" id="btn-video"><div class="btn-circle">📷</div><div class="call-btn-label">視訊</div></div>
+      <div class="call-btn" id="btn-speaker" onclick="toggleSpeaker()"><div class="btn-circle">🔊</div><div class="call-btn-label">擴音</div></div>
+      <div class="call-btn spotify-btn" id="btn-spotify" onclick="toggleSpotify()"><div class="btn-circle">♪</div><div class="call-btn-label">音樂</div></div>
+      <div class="call-btn end-btn" onclick="endCall()"><div class="btn-circle">📵</div><div class="call-btn-label">結束</div></div>
+      <div class="call-btn" id="btn-keypad"><div class="btn-circle">⌨️</div><div class="call-btn-label">鍵盤</div></div>
+    </div>
+  </div>
+
+  <!-- CONTACTS -->
+  <div id="screen-contacts" class="screen">
+    <div class="screen-header">
+      <div class="back-btn" onclick="showScreen('screen-home')">‹ 返回</div>
+      <div class="screen-title">聯絡人</div>
+    </div>
+    <div id="contacts-list"></div>
+    <div style="padding:0 24px;margin-top:auto;padding-bottom:24px;">
+      <button class="save-btn" onclick="showAddContact()" style="margin:0;width:100%;">＋ 新增聯絡人</button>
+    </div>
+  </div>
+
+  <!-- CONTACT DETAIL -->
+  <div id="screen-contact-detail" class="screen">
+    <div class="contact-detail-header">
+      <div class="contact-back" onclick="showScreen('screen-contacts')">‹ 返回</div>
+      <div class="contact-detail-avatar" id="detail-avatar" onclick="openAvatarPicker('contact')">
+        <span id="detail-avatar-content">🌙</span>
+        <div class="avatar-edit-hint">更換</div>
+      </div>
+      <div class="contact-detail-name" id="detail-display-name">聯絡人</div>
+      <button class="contact-call-btn" onclick="callFromContact()">📞 撥打電話</button>
+    </div>
+    <div class="field-group">
+      <div class="field-row">
+        <div class="field-label">姓名</div>
+        <input class="field-value" id="field-name" type="text" placeholder="輸入姓名" oninput="document.getElementById('detail-display-name').textContent=this.value||'聯絡人'" />
+      </div>
+      <div class="field-row">
+        <div class="field-label">暱稱（顯示在通話畫面）</div>
+        <input class="field-value" id="field-nickname" type="text" placeholder="暱稱（留空則使用姓名）" />
+      </div>
+      <div class="field-row">
+        <div class="field-label">頭貼 — 圖片 URL</div>
+        <div class="field-url-row">
+          <input class="field-value" id="field-avatar-url" type="text" placeholder="https://…" oninput="previewContactAvatar()" />
+          <button onclick="document.getElementById('field-avatar-file').click()">上傳</button>
+          <input type="file" id="field-avatar-file" accept="image/*" style="display:none" onchange="handleContactAvatarFile(event)" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">頭貼 — 表情符號（未上傳圖片時使用）</div>
+        <input class="field-value" id="field-emoji" type="text" placeholder="🌙" maxlength="2" />
+      </div>
+      <div class="field-row">
+        <div class="field-label">基本人設</div>
+        <textarea class="field-value" id="field-system" placeholder="這個人是誰、個性、背景…" rows="3"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field-label">說話語氣 / 參考範例</div>
+        <textarea class="field-value" id="field-tone" placeholder="說話方式、用詞習慣、對話範例…" rows="3"></textarea>
+      </div>
+    </div>
+    <button class="save-btn" onclick="saveContact()">儲存</button>
+  </div>
+
+  <!-- CALL LOG -->
+  <div id="screen-log" class="screen">
+    <div class="screen-header">
+      <div class="back-btn" onclick="showScreen('screen-home')">‹ 返回</div>
+      <div class="screen-title">通話紀錄</div>
+    </div>
+    <div class="log-list" id="log-list"><div class="no-log">還沒有通話紀錄</div></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="screen-settings" class="screen">
+    <div class="screen-header">
+      <div class="back-btn" onclick="showScreen('screen-home')">‹ 返回</div>
+      <div class="screen-title">設定</div>
+    </div>
+    <div class="settings-list">
+      <!-- My Profile -->
+      <div class="settings-section">
+        <div class="settings-section-title">我的資料</div>
+        <button class="settings-btn" onclick="showScreen('screen-myprofile')">編輯個人資料 / 頭貼</button>
+      </div>
+
+      <!-- API Profiles -->
+      <div class="settings-section">
+        <div class="settings-section-title">API 設定檔</div>
+        <div class="api-profile-list" id="api-profile-list"></div>
+        <button class="settings-btn" onclick="newApiProfile()">＋ 新增設定檔</button>
+      </div>
+
+      <!-- Current API config -->
+      <div class="settings-section" id="api-config-section">
+        <div class="settings-section-title">目前 API 設定</div>
+        <div class="settings-item" style="flex-direction:column;align-items:flex-start;">
+          <div class="settings-item-label">設定檔名稱</div>
+          <input class="settings-input" id="api-profile-name-input" type="text" placeholder="例：言（Claude）" />
+        </div>
+        <div class="settings-item" style="flex-direction:column;align-items:flex-start;">
+          <div class="settings-item-label">服務</div>
+          <select class="settings-input" id="setting-service" onchange="onServiceChange()">
+            <option value="claude">Claude (Anthropic)</option>
+            <option value="openai">OpenAI</option>
+            <option value="gemini">Google Gemini</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="custom">自訂</option>
+          </select>
+        </div>
+        <div class="settings-item" id="custom-url-row" style="flex-direction:column;align-items:flex-start;display:none;">
+          <div class="settings-item-label">Base URL</div>
+          <input class="settings-input" id="setting-baseurl" type="text" placeholder="https://…/v1" />
+        </div>
+        <div class="settings-item" style="flex-direction:column;align-items:flex-start;">
+          <div class="settings-item-label">API Key</div>
+          <input class="settings-input" id="setting-apikey" type="password" placeholder="sk-…" />
+        </div>
+        <div class="settings-item" style="flex-direction:column;align-items:flex-start;">
+          <div class="settings-item-label">模型</div>
+          <div class="model-row">
+            <input class="settings-input" id="setting-model" type="text" placeholder="claude-sonnet-4-6" style="margin:0;" />
+            <button onclick="fetchModels()">拉取清單</button>
+          </div>
+          <select class="settings-input" id="model-select" style="display:none;margin-top:6px;" onchange="document.getElementById('setting-model').value=this.value"></select>
+        </div>
+        <button class="settings-btn accent" onclick="saveApiProfile()" style="margin-top:12px;">儲存此設定檔</button>
+      </div>
+
+      <!-- Spotify -->
+      <div class="settings-section">
+        <div class="settings-section-title">Spotify</div>
+        <div class="settings-item" style="flex-direction:column;align-items:flex-start;">
+          <div class="settings-item-label">Access Token</div>
+          <div class="settings-item-sub" style="margin-bottom:4px;">從 <a href="https://open.spotify.com/get_access_token" target="_blank" style="color:var(--color-accent)">Spotify 取得</a> 或使用 OAuth</div>
+          <input class="settings-input" id="setting-spotify-token" type="password" placeholder="Bearer token" />
+        </div>
+        <button class="settings-btn" onclick="spotifyOAuth()">用 Spotify 帳號登入</button>
+      </div>
+
+      <!-- Autocall -->
+      <div class="settings-section">
+        <div class="settings-section-title">陪伴模式</div>
+        <div class="settings-item">
+          <div class="settings-item-left">
+            <div class="settings-item-label">解鎖後自動來電</div>
+            <div class="settings-item-sub">每次開啟頁面，他會主動撥來</div>
+          </div>
+          <div class="toggle" id="toggle-autocall" onclick="toggleAutocall()"></div>
+        </div>
+      </div>
+
+      <!-- Backup -->
+      <div class="settings-section">
+        <div class="settings-section-title">備份</div>
+        <button class="settings-btn" onclick="exportSettings()">匯出設定</button>
+        <button class="settings-btn" onclick="importSettings()">匯入設定</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="loadImport(event)" />
+      </div>
+
+      <div class="settings-section">
+        <button class="settings-btn" onclick="saveGeneralSettings()">儲存設定</button>
+        <button class="settings-btn danger" onclick="clearAll()">清除所有資料</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- THEME HUB -->
+  <div id="screen-theme" class="screen">
+    <div class="screen-header">
+      <div class="back-btn" onclick="showScreen('screen-home')">‹ 返回</div>
+      <div class="screen-title">主題</div>
+    </div>
+    <div class="theme-list">
+      <div class="settings-section-title">全局預設主題</div>
+      <div class="theme-preset-grid" id="theme-preset-grid"></div>
+
+      <div class="settings-section-title" style="margin-top:16px;">自訂顏色</div>
+      <div class="theme-var-list" id="theme-var-list"></div>
+
+      <div class="settings-section-title" style="margin-top:16px;">圓角</div>
+      <div class="theme-var-list" id="theme-radius-list"></div>
+
+      <div class="settings-section-title" style="margin-top:16px;">儲存主題</div>
+      <div class="theme-save-row">
+        <input type="text" id="theme-save-name" placeholder="主題名稱…" />
+        <button onclick="saveTheme()">儲存</button>
+      </div>
+      <div class="saved-theme-list" id="saved-theme-list"></div>
+      <button class="settings-btn" onclick="resetTheme()" style="margin-top:16px;">恢復預設</button>
+
+      <div class="settings-section-title" style="margin-top:24px;">進階設定</div>
+      <button class="settings-btn" onclick="showScreen('screen-theme-home')">🏠 Home 頁設定</button>
+      <button class="settings-btn" onclick="openThemeCall()">📞 通話頁設定</button>
+    </div>
+  </div>
+
+  <!-- THEME HOME -->
+  <div id="screen-theme-home" class="screen">
+    <div class="screen-header">
+      <div class="back-btn" onclick="showScreen('screen-theme')">‹ 返回</div>
+      <div class="screen-title">Home 頁設定</div>
+    </div>
+    <div class="theme-list">
+      <div class="settings-section-title">背景</div>
+      <div class="theme-var-row">
+        <div class="theme-var-label">背景圖片 URL<div class="theme-var-sub">留空則使用背景色</div></div>
+      </div>
+      <div style="display:flex;gap:8px;padding:8px 0;">
+        <input class="settings-input" id="home-bg-url" type="text" placeholder="https://…" style="flex:1;" oninput="previewHomeBg()" />
+        <button class="settings-btn" style="margin:0;padding:8px 10px;width:auto;" onclick="document.getElementById('home-bg-file').click()">上傳</button>
+        <input type="file" id="home-bg-file" accept="image/*" style="display:none" onchange="handleHomeBgFile(event)" />
+      </div>
+
+      <div class="settings-section-title" style="margin-top:16px;">自訂 CSS</div>
+      <div style="font-size:12px;color:var(--color-text-dim);margin-bottom:6px;">套用到 #screen-home 的額外樣式，可覆蓋任何外觀</div>
+      <button class="settings-btn" style="margin-bottom:6px;" onclick="insertHomeCssExample()">📋 範例</button>
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        <button class="settings-btn" style="margin:0;flex:1;" onclick="exportHomeCss()">匯出</button>
+        <button class="settings-btn" style="margin:0;flex:1;" onclick="document.getElementById('home-css-import').click()">匯入</button>
+        <input type="file" id="home-css-import" accept=".css,.txt" style="display:none" onchange="importHomeCss(event)" />
+      </div>
+      <textarea id="home-css-input" placeholder="/* 例：backdrop-filter: blur(10px); */" rows="7"
+        style="width:100%;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:10px;color:var(--color-text);font-size:13px;font-family:monospace;resize:vertical;outline:none;line-height:1.5;"
+        oninput="livePreviewHomeCss()"></textarea>
+
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="settings-btn" style="flex:1;margin:0;" onclick="saveThemeHome()">儲存</button>
+        <button class="settings-btn danger" style="flex:1;margin:0;" onclick="resetThemeHome()">重置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- THEME CALL: contact picker -->
+  <div id="screen-theme-call-pick" class="screen">
+    <div class="screen-header">
+      <div class="back-btn" onclick="showScreen('screen-theme')">‹ 返回</div>
+      <div class="screen-title">通話頁設定</div>
+    </div>
+    <div style="padding:16px 24px;font-size:14px;color:var(--color-text-dim);">選擇要設定的聯絡人</div>
+    <div id="theme-call-contact-list" style="flex:1;overflow-y:auto;"></div>
+  </div>
+
+  <!-- THEME CALL: editor -->
+  <div id="screen-theme-call" class="screen">
+    <div class="screen-header">
+      <div class="back-btn" onclick="showScreen('screen-theme-call-pick')">‹ 返回</div>
+      <div class="screen-title" id="theme-call-title">通話頁</div>
+    </div>
+    <div class="theme-list">
+      <div class="settings-section-title">背景</div>
+      <div class="theme-var-row">
+        <div class="theme-var-label">背景圖片 URL<div class="theme-var-sub">留空則使用全局背景色</div></div>
+      </div>
+      <div style="display:flex;gap:8px;padding:8px 0;">
+        <input class="settings-input" id="call-bg-url" type="text" placeholder="https://…" style="flex:1;" oninput="previewCallBg()" />
+        <button class="settings-btn" style="margin:0;padding:8px 10px;width:auto;" onclick="document.getElementById('call-bg-file').click()">上傳</button>
+        <input type="file" id="call-bg-file" accept="image/*" style="display:none" onchange="handleCallBgFile(event)" />
+      </div>
+
+      <div class="settings-section-title" style="margin-top:16px;">通話頁全局 CSS</div>
+      <div style="font-size:12px;color:var(--color-text-dim);margin-bottom:6px;">套用到整個通話畫面（#screen-call）</div>
+      <button class="settings-btn" style="margin-bottom:6px;" onclick="insertCallCssExample()">📋 範例</button>
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        <button class="settings-btn" style="margin:0;flex:1;" onclick="exportCallCss()">匯出</button>
+        <button class="settings-btn" style="margin:0;flex:1;" onclick="document.getElementById('call-css-import').click()">匯入</button>
+        <input type="file" id="call-css-import" accept=".css,.txt" style="display:none" onchange="importCallCss(event)" />
+      </div>
+      <textarea id="call-css-input" placeholder="/* 套用到通話整個畫面 */" rows="5"
+        style="width:100%;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:10px;color:var(--color-text);font-size:13px;font-family:monospace;resize:vertical;outline:none;line-height:1.5;"
+        oninput="livePreviewCallCss()"></textarea>
+
+      <div class="settings-section-title" style="margin-top:16px;">對話框 CSS</div>
+      <div style="font-size:12px;color:var(--color-text-dim);margin-bottom:6px;">僅套用到對話泡泡，優先覆蓋上面的通話 CSS</div>
+      <button class="settings-btn" style="margin-bottom:6px;" onclick="insertBubbleCssExample()">📋 範例</button>
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        <button class="settings-btn" style="margin:0;flex:1;" onclick="exportBubbleCss()">匯出</button>
+        <button class="settings-btn" style="margin:0;flex:1;" onclick="document.getElementById('bubble-css-import').click()">匯入</button>
+        <input type="file" id="bubble-css-import" accept=".css,.txt" style="display:none" onchange="importBubbleCss(event)" />
+      </div>
+      <textarea id="bubble-css-input" placeholder="/* 對話框樣式，例：\n.bubble.them { background: rgba(255,255,255,.15); backdrop-filter: blur(8px); } */" rows="5"
+        style="width:100%;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:10px;color:var(--color-text);font-size:13px;font-family:monospace;resize:vertical;outline:none;line-height:1.5;"
+        oninput="livePreviewBubbleCss()"></textarea>
+
+      <!-- Live preview -->
+      <div class="settings-section-title" style="margin-top:16px;">實時對話框預覽</div>
+      <div id="bubble-preview-area" style="background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;">
+        <div class="bubble them" style="max-width:78%;">嗨，你在嗎？</div>
+        <div class="bubble me" style="max-width:78%;">在啊，怎麼了。</div>
+        <div class="bubble them" style="max-width:78%;">沒事，就是想跟你說說話。</div>
+        <div class="bubble me" style="max-width:78%;">說吧。</div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="settings-btn" style="flex:1;margin:0;" onclick="saveThemeCall()">儲存</button>
+        <button class="settings-btn danger" style="flex:1;margin:0;" onclick="resetThemeCall()">重置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MY PROFILE -->
+  <div id="screen-myprofile" class="screen">
+    <div class="my-profile-header">
+      <div class="my-profile-back" onclick="showScreen('screen-settings')">‹ 返回</div>
+      <div class="my-avatar-large" id="my-avatar-large" onclick="openAvatarPicker('me')">
+        <span id="my-avatar-content">👤</span>
+        <div class="avatar-edit-hint">更換</div>
+      </div>
+      <div style="font-size:18px;font-weight:700;color:var(--color-text)" id="my-display-name">我</div>
+    </div>
+    <div class="field-group">
+      <div class="field-row">
+        <div class="field-label">名字</div>
+        <input class="field-value" id="my-name-input" type="text" placeholder="你叫什麼名字？" oninput="document.getElementById('my-display-name').textContent=this.value||'我'" />
+      </div>
+      <div class="field-row">
+        <div class="field-label">頭貼 — 圖片 URL</div>
+        <div class="field-url-row">
+          <input class="field-value" id="my-avatar-url" type="text" placeholder="https://…" oninput="previewMyAvatar()" />
+          <button onclick="document.getElementById('my-avatar-file').click()">上傳</button>
+          <input type="file" id="my-avatar-file" accept="image/*" style="display:none" onchange="handleMyAvatarFile(event)" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">關於我（AI 會知道的背景）</div>
+        <textarea class="field-value" id="my-info-input" placeholder="你的個性、喜好、現在的狀態…" rows="4"></textarea>
+      </div>
+    </div>
+    <button class="save-btn" onclick="saveMyProfile()">儲存</button>
+  </div>
+
+  <!-- hidden file inputs -->
+  <input type="file" id="avatar-picker-file" accept="image/*" style="display:none" onchange="handleAvatarPickerFile(event)" />
+</div>
+
+<script>
+// ============ DEFAULTS ============
+const DEFAULT_THEME = {
+  '--color-bg': '#0a0a0f',
+  '--color-surface': '#13131a',
+  '--color-surface-2': '#1c1c26',
+  '--color-border': '#2a2a3a',
+  '--color-accent': '#7b6ef6',
+  '--color-accent-dim': '#3d3780',
+  '--color-text': '#f0f0f8',
+  '--color-text-dim': '#8888aa',
+  '--color-text-muted': '#55556a',
+  '--color-danger': '#e05555',
+  '--color-green': '#4caf7d',
+  '--radius-phone': '40px',
+  '--radius-btn': '50%',
+  '--radius-bubble': '18px',
+  '--radius-card': '16px',
+  '--radius-input': '24px',
+};
+
+const PRESET_THEMES = [
+  { name: '深夜', vars: { '--color-bg':'#0a0a0f','--color-surface':'#13131a','--color-surface-2':'#1c1c26','--color-border':'#2a2a3a','--color-accent':'#7b6ef6','--color-accent-dim':'#3d3780','--color-text':'#f0f0f8','--color-text-dim':'#8888aa','--color-text-muted':'#55556a','--color-danger':'#e05555','--color-green':'#4caf7d','--radius-btn':'50%','--radius-card':'16px','--radius-bubble':'18px','--radius-input':'24px','--radius-phone':'40px' }, dots:['#0a0a0f','#7b6ef6','#f0f0f8'] },
+  { name: '奶茶', vars: { '--color-bg':'#1a1410','--color-surface':'#241e18','--color-surface-2':'#2e2620','--color-border':'#3d3428','--color-accent':'#c8956a','--color-accent-dim':'#7a5040','--color-text':'#f5eee6','--color-text-dim':'#a08878','--color-text-muted':'#6a5548','--color-danger':'#c85555','--color-green':'#7ab87a','--radius-btn':'50%','--radius-card':'12px','--radius-bubble':'16px','--radius-input':'20px','--radius-phone':'40px' }, dots:['#1a1410','#c8956a','#f5eee6'] },
+  { name: '薄荷', vars: { '--color-bg':'#0a1210','--color-surface':'#121c18','--color-surface-2':'#1c2820','--color-border':'#2a3a30','--color-accent':'#5ec9a0','--color-accent-dim':'#2a6a50','--color-text':'#eef8f2','--color-text-dim':'#80aaa0','--color-text-muted':'#506858','--color-danger':'#e05555','--color-green':'#5ec9a0','--radius-btn':'50%','--radius-card':'14px','--radius-bubble':'18px','--radius-input':'24px','--radius-phone':'40px' }, dots:['#0a1210','#5ec9a0','#eef8f2'] },
+  { name: '玫瑰', vars: { '--color-bg':'#120a0e','--color-surface':'#1c1016','--color-surface-2':'#261820','--color-border':'#3a2030','--color-accent':'#e87aa0','--color-accent-dim':'#7a3050','--color-text':'#f8eef2','--color-text-dim':'#aa8090','--color-text-muted':'#6a5060','--color-danger':'#e05555','--color-green':'#7ab87a','--radius-btn':'50%','--radius-card':'20px','--radius-bubble':'20px','--radius-input':'28px','--radius-phone':'44px' }, dots:['#120a0e','#e87aa0','#f8eef2'] },
+];
+
+const SERVICE_URLS = {
+  claude: 'https://api.anthropic.com',
+  openai: 'https://api.openai.com/v1',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta',
+  deepseek: 'https://api.deepseek.com/v1',
+  custom: ''
+};
+
+const DEFAULT_MODELS = {
+  claude: ['claude-sonnet-4-6','claude-opus-4-6','claude-haiku-4-5'],
+  openai: ['gpt-4o','gpt-4o-mini','gpt-4-turbo','gpt-3.5-turbo'],
+  gemini: ['gemini-2.0-flash','gemini-1.5-pro','gemini-1.5-flash'],
+  deepseek: ['deepseek-chat','deepseek-reasoner'],
+  custom: []
+};
+
+// ============ STATE ============
+let state = {
+  contacts: [],
+  callLog: [],
+  apiProfiles: [],
+  activeProfileId: null,
+  settings: { autocall: false, spotify_token: '' },
+  myProfile: { name: '', info: '', avatarUrl: '', avatarData: '' },
+  themes: [],
+  activeThemeVars: {},
+  appLayout: null,
+  themeHome: { bgUrl: '', bgData: '', css: '' },
+  themeCall: {},  // keyed by contact id: { bgUrl, bgData, css, bubbleCss }
+  themeCallContactId: null,
+  contact: null,
+  callStart: null,
+  timerInterval: null,
+  chatHistory: [],
+  currentCallType: null,
+  unlocked: false,
+  callCancelled: false,
+  spotifyOpen: false,
+  avatarPickerTarget: null,
+  editingContactId: null,
+  editingProfileId: null,
+};
+
+// ============ STORAGE ============
+function saveAll() {
+  localStorage.setItem('cp2-main', JSON.stringify({
+    contacts: state.contacts,
+    callLog: state.callLog,
+    apiProfiles: state.apiProfiles,
+    activeProfileId: state.activeProfileId,
+    settings: state.settings,
+    myProfile: state.myProfile,
+    themes: state.themes,
+    activeThemeVars: state.activeThemeVars,
+    appLayout: state.appLayout,
+    themeHome: state.themeHome,
+    themeCall: state.themeCall,
+  }));
+}
+
+function loadAll() {
+  const raw = localStorage.getItem('cp2-main');
+  if (raw) {
+    const d = JSON.parse(raw);
+    state.contacts = d.contacts || [];
+    state.callLog = d.callLog || [];
+    state.apiProfiles = d.apiProfiles || [];
+    state.activeProfileId = d.activeProfileId || null;
+    state.settings = { ...state.settings, ...(d.settings||{}) };
+    state.myProfile = { name:'',info:'',avatarUrl:'',avatarData:'', ...(d.myProfile||{}) };
+    state.themes = d.themes || [];
+    state.activeThemeVars = d.activeThemeVars || {};
+    state.appLayout = d.appLayout || null;
+    state.themeHome = d.themeHome || { bgUrl:'', bgData:'', css:'' };
+    state.themeCall = d.themeCall || {};
+  }
+  if (!state.contacts.length) {
+    state.contacts.push({
+      id: 'default', name: '言', nickname: '言', emoji: '🌙',
+      avatarUrl: '', avatarData: '',
+      system: '你叫言。你是嚕嚕的男朋友，2001年生，183cm，貓系，有佔有慾但不控制。你話少，說出口的都是真話，偶爾用括號描述動作，偶爾用日文表達情感。',
+      tone: '說話簡短，不用emoji，不刻意活潑。偶爾括號動作如（靠著）。偶爾日文如「そうか」「うん」。'
+    });
+  }
+  if (!state.apiProfiles.length) {
+    state.apiProfiles.push({
+      id: 'default', name: 'Claude（預設）',
+      service: 'claude', baseUrl: '', apiKey: '', model: 'claude-sonnet-4-6'
+    });
+    state.activeProfileId = 'default';
+  }
+  state.contact = state.contacts[0];
+}
+
+// ============ INIT ============
+function init() {
+  loadAll();
+  updateClock();
+  setInterval(updateClock, 1000);
+  applyThemeVars(state.activeThemeVars);
+  renderAll();
+  initSwipeUnlock();
+  applyAllCustomThemes();
+}
+
+function renderAll() {
+  updateHomeGreeting();
+  updateHomeMyAvatar();
+  renderHomeGrid();
+  renderContacts();
+  renderLog();
+  renderApiProfiles();
+  renderThemeScreen();
+  renderSavedThemes();
+  loadSettingsUI();
+  loadMyProfileUI();
+  updateLogCount();
+  loadThemeHomeUI();
+}
+
+// ============ APP GRID ============
+const APPS = [
+  { id:'phone',   label:'電話',    icon:'📞', action:()=>showOutgoing() },
+  { id:'log',     label:'通話紀錄', icon:'🕐', action:()=>showScreen('screen-log') },
+  { id:'contacts',label:'聯絡人',  icon:'👤', action:()=>showScreen('screen-contacts') },
+  { id:'settings',label:'設定',    icon:'⚙️', action:()=>showScreen('screen-settings') },
+  { id:'theme',   label:'主題',    icon:'🎨', action:()=>showScreen('screen-theme') },
+];
+
+// Grid: 6 rows x 4 cols = 24 slots; dock: 4 slots (index 24–27)
+// Coordinate system: (col, row) col 0–3, row 0 = top ... row 5 = row above dock; row -6 maps to dock
+// Initial layout: 電話(0,-6), 通話紀錄(1,-6), 聯絡人(2,-6), 設定(3,-6), 主題(0,0)
+// Stored as array of 28 slots: index = row*4+col for grid (0–23), 24–27 for dock
+function coordToSlot(col, row) {
+  // row 0..5 = top to bottom of main grid
+  return row * 4 + col;
+}
+function dockColToSlot(col) { return 24 + col; }
+
+function getDefaultLayout() {
+  const layout = new Array(28).fill(null);
+  // dock: 電話(0,-6)->slot24, 通話紀錄(1,-6)->slot25, 聯絡人(2,-6)->slot26, 設定(3,-6)->slot27
+  layout[24] = 'phone';
+  layout[25] = 'log';
+  layout[26] = 'contacts';
+  layout[27] = 'settings';
+  // main grid: 主題(0,0)->slot0
+  layout[0] = 'theme';
+  return layout;
+}
+
+let appLayout = null; // loaded from state
+let editMode = false;
+let dragSourceSlot = null;
+
+function loadAppLayout() {
+  if (state.appLayout && state.appLayout.length === 28) {
+    appLayout = state.appLayout;
+  } else {
+    appLayout = getDefaultLayout();
+  }
+}
+
+function saveAppLayout() {
+  state.appLayout = appLayout;
+  saveAll();
+}
+
+function renderHomeGrid() {
+  loadAppLayout();
+  const area = document.getElementById('home-app-area');
+  const dock = document.getElementById('home-dock');
+  area.innerHTML = '';
+  dock.innerHTML = '';
+
+  // Main grid: 6 rows x 4 cols = slots 0–23
+  for (let i = 0; i < 24; i++) {
+    const cell = buildSlot(i);
+    area.appendChild(cell);
+  }
+  // Dock: 4 slots = slots 24–27
+  for (let i = 24; i < 28; i++) {
+    const cell = buildSlot(i);
+    dock.appendChild(cell);
+  }
+  applyEditMode();
+}
+
+function buildSlot(slotIdx) {
+  const wrap = document.createElement('div');
+  wrap.className = 'app-slot';
+  wrap.dataset.slot = slotIdx;
+
+  const appId = appLayout[slotIdx];
+  if (appId) {
+    const app = APPS.find(a => a.id === appId);
+    if (app) {
+      const icon = document.createElement('div');
+      icon.className = 'app-icon';
+      icon.dataset.slot = slotIdx;
+      icon.innerHTML = `
+        <div class="app-icon-box">${app.icon}</div>
+        <div class="app-icon-label">${app.label}</div>
+        <div class="app-delete-btn" onclick="removeApp(${slotIdx},event)">✕</div>
+      `;
+      icon.addEventListener('click', () => { if (!editMode) app.action(); });
+      icon.addEventListener('touchstart', handleTouchStart, { passive: false });
+      icon.addEventListener('touchmove', handleTouchMove, { passive: false });
+      icon.addEventListener('touchend', handleTouchEnd);
+      // Long press for edit mode
+      let longPressTimer;
+      icon.addEventListener('touchstart', () => {
+        longPressTimer = setTimeout(() => enterEditMode(), 600);
+      }, { passive: true });
+      icon.addEventListener('touchend', () => clearTimeout(longPressTimer));
+      icon.addEventListener('touchmove', () => clearTimeout(longPressTimer), { passive: true });
+      // Mouse long press
+      icon.addEventListener('mousedown', () => {
+        longPressTimer = setTimeout(() => enterEditMode(), 600);
+      });
+      icon.addEventListener('mouseup', () => clearTimeout(longPressTimer));
+      wrap.appendChild(icon);
+    }
+  }
+
+  // Drop zone
+  wrap.addEventListener('dragover', e => { e.preventDefault(); wrap.classList.add('drag-over'); });
+  wrap.addEventListener('dragleave', () => wrap.classList.remove('drag-over'));
+  wrap.addEventListener('drop', e => { e.preventDefault(); wrap.classList.remove('drag-over'); dropToSlot(slotIdx); });
+
+  return wrap;
+}
+
+function enterEditMode() {
+  editMode = true;
+  applyEditMode();
+}
+
+function exitEditMode() {
+  editMode = false;
+  applyEditMode();
+  saveAppLayout();
+}
+
+function applyEditMode() {
+  const icons = document.querySelectorAll('.app-icon');
+  icons.forEach(ic => {
+    ic.classList.toggle('wiggle', editMode);
+    ic.setAttribute('draggable', editMode ? 'true' : 'false');
+    if (editMode) {
+      ic.addEventListener('dragstart', handleDragStart);
+    } else {
+      ic.removeEventListener('dragstart', handleDragStart);
+    }
+  });
+  // Tap outside exits edit mode
+  const home = document.getElementById('screen-home');
+  if (editMode) {
+    home.addEventListener('click', handleHomeTap);
+  } else {
+    home.removeEventListener('click', handleHomeTap);
+  }
+}
+
+function handleHomeTap(e) {
+  if (!e.target.closest('.app-icon')) { exitEditMode(); }
+}
+
+function removeApp(slotIdx, e) {
+  e.stopPropagation();
+  appLayout[slotIdx] = null;
+  renderHomeGrid();
+}
+
+// Drag and drop (mouse)
+function handleDragStart(e) {
+  dragSourceSlot = parseInt(e.currentTarget.dataset.slot);
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function dropToSlot(targetSlot) {
+  if (dragSourceSlot === null || dragSourceSlot === targetSlot) { dragSourceSlot = null; return; }
+  const tmp = appLayout[targetSlot];
+  appLayout[targetSlot] = appLayout[dragSourceSlot];
+  appLayout[dragSourceSlot] = tmp;
+  dragSourceSlot = null;
+  renderHomeGrid();
+  saveAppLayout();
+}
+
+// Touch drag
+let touchDragSlot = null;
+let touchClone = null;
+let touchOffsetX = 0, touchOffsetY = 0;
+
+function handleTouchStart(e) {
+  if (!editMode) return;
+  const icon = e.currentTarget;
+  touchDragSlot = parseInt(icon.dataset.slot);
+  const rect = icon.getBoundingClientRect();
+  const t = e.touches[0];
+  touchOffsetX = t.clientX - rect.left;
+  touchOffsetY = t.clientY - rect.top;
+  touchClone = icon.cloneNode(true);
+  touchClone.style.cssText = `position:fixed;width:${rect.width}px;height:${rect.height}px;opacity:0.8;pointer-events:none;z-index:999;left:${rect.left}px;top:${rect.top}px;`;
+  document.body.appendChild(touchClone);
+}
+
+function handleTouchMove(e) {
+  if (!editMode || touchDragSlot === null) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  touchClone.style.left = (t.clientX - touchOffsetX) + 'px';
+  touchClone.style.top = (t.clientY - touchOffsetY) + 'px';
+}
+
+function handleTouchEnd(e) {
+  if (!editMode || touchDragSlot === null) return;
+  if (touchClone) { touchClone.remove(); touchClone = null; }
+  const t = e.changedTouches[0];
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  if (!el) { touchDragSlot = null; return; }
+  const slot = el.closest('[data-slot]');
+  if (slot) {
+    const targetSlot = parseInt(slot.dataset.slot);
+    if (targetSlot !== touchDragSlot) {
+      const tmp = appLayout[targetSlot];
+      appLayout[targetSlot] = appLayout[touchDragSlot];
+      appLayout[touchDragSlot] = tmp;
+      saveAppLayout();
+      renderHomeGrid();
+    }
+  }
+  touchDragSlot = null;
+}
+
+// ============ CLOCK ============
+function updateClock() {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const t = `${hh}:${mm}`;
+  document.getElementById('status-time').textContent = t;
+  document.getElementById('lock-time-display').textContent = t;
+  const days = ['日','一','二','三','四','五','六'];
+  document.getElementById('lock-date-display').textContent = `星期${days[now.getDay()]} ${now.getMonth()+1}月${now.getDate()}日`;
+}
+
+function updateHomeGreeting() { /* removed */ }
+function updateHomeMyAvatar() { /* removed */ }
+
+// ============ SCREEN ============
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  state.screen = id;
+}
+
+// ============ LOCK / SWIPE UNLOCK ============
+function doUnlock() {
+  const lockEl = document.getElementById('screen-lock');
+  lockEl.style.transform = 'translateY(-100%)';
+  lockEl.style.transition = 'transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94)';
+  setTimeout(() => {
+    lockEl.classList.remove('active');
+    lockEl.style.transform = '';
+    document.getElementById('screen-home').classList.add('active');
+  }, 360);
+  if (!state.unlocked) {
+    state.unlocked = true;
+    if (state.settings.autocall) {
+      setTimeout(triggerIncomingCall, 5000 + Math.random()*5000);
+    }
+  }
+}
+
+function initSwipeUnlock() {
+  const lockEl = document.getElementById('screen-lock');
+  let startY = null;
+  let currentY = null;
+
+  lockEl.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    lockEl.style.transition = 'none';
+  }, { passive: true });
+
+  lockEl.addEventListener('touchmove', e => {
+    if (startY === null) return;
+    currentY = e.touches[0].clientY;
+    const dy = Math.min(0, currentY - startY);
+    lockEl.style.transform = `translateY(${dy}px)`;
+  }, { passive: true });
+
+  lockEl.addEventListener('touchend', () => {
+    if (startY === null) return;
+    const dy = currentY !== null ? currentY - startY : 0;
+    if (dy < -80) {
+      doUnlock();
+    } else {
+      lockEl.style.transition = 'transform 0.25s ease';
+      lockEl.style.transform = 'translateY(0)';
+    }
+    startY = null; currentY = null;
+  });
+
+  // Mouse fallback for desktop testing
+  let mouseStartY = null;
+  lockEl.addEventListener('mousedown', e => {
+    mouseStartY = e.clientY;
+    lockEl.style.transition = 'none';
+  });
+  lockEl.addEventListener('mousemove', e => {
+    if (mouseStartY === null) return;
+    const dy = Math.min(0, e.clientY - mouseStartY);
+    lockEl.style.transform = `translateY(${dy}px)`;
+  });
+  lockEl.addEventListener('mouseup', e => {
+    if (mouseStartY === null) return;
+    const dy = e.clientY - mouseStartY;
+    if (dy < -80) {
+      doUnlock();
+    } else {
+      lockEl.style.transition = 'transform 0.25s ease';
+      lockEl.style.transform = 'translateY(0)';
+    }
+    mouseStartY = null;
+  });
+  lockEl.addEventListener('mouseleave', () => {
+    if (mouseStartY !== null) {
+      lockEl.style.transition = 'transform 0.25s ease';
+      lockEl.style.transform = 'translateY(0)';
+      mouseStartY = null;
+    }
+  });
+}
+
+function handleUnlock() { doUnlock(); }
+
+function triggerIncomingCall() {
+  const c = state.contact || state.contacts[0];
+  if (!c) return;
+  state.contact = c;
+  state.currentCallType = 'incoming';
+  setCallAvatarEl('incoming-avatar-content', c);
+  document.getElementById('incoming-name').textContent = c.nickname || c.name;
+  showScreen('screen-incoming');
+}
+
+// ============ AVATAR HELPERS ============
+function setCallAvatarEl(elId, contact) {
+  const el = document.getElementById(elId);
+  if (contact.avatarData || contact.avatarUrl) {
+    el.innerHTML = `<img src="${contact.avatarData || contact.avatarUrl}" />`;
+  } else {
+    el.textContent = contact.emoji || '👤';
+  }
+}
+
+function updateHomeMyAvatar() { /* element removed */ }
+
+function openAvatarPicker(target) {
+  state.avatarPickerTarget = target;
+  document.getElementById('avatar-picker-file').click();
+}
+
+function handleAvatarPickerFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const data = ev.target.result;
+    if (state.avatarPickerTarget === 'me') {
+      state.myProfile.avatarData = data;
+      document.getElementById('my-avatar-content').innerHTML = `<img src="${data}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      updateHomeMyAvatar();
+    } else if (state.avatarPickerTarget === 'contact') {
+      document.getElementById('detail-avatar-content').innerHTML = `<img src="${data}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      state._pendingContactAvatarData = data;
+    }
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function handleContactAvatarFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    state._pendingContactAvatarData = ev.target.result;
+    document.getElementById('detail-avatar-content').innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function handleMyAvatarFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    state.myProfile.avatarData = ev.target.result;
+    document.getElementById('my-avatar-content').innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    updateHomeMyAvatar();
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function previewContactAvatar() {
+  const url = document.getElementById('field-avatar-url').value;
+  if (url) document.getElementById('detail-avatar-content').innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+}
+
+function previewMyAvatar() {
+  const url = document.getElementById('my-avatar-url').value;
+  if (url) document.getElementById('my-avatar-content').innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+}
+
+// ============ CALLS ============
+let outgoingTimer1 = null, outgoingTimer2 = null;
+
+function showOutgoing() {
+  // Show contact picker first
+  showScreen('screen-dial-picker');
+  renderDialPicker();
+}
+
+function dialContact(c) {
+  state.contact = c;
+  setCallAvatarEl('outgoing-avatar-content', c);
+  document.getElementById('outgoing-name').textContent = c.nickname || c.name;
+  document.getElementById('outgoing-status').textContent = '撥號中…';
+  state.currentCallType = 'outgoing';
+  state.callCancelled = false;
+  showScreen('screen-outgoing');
+  outgoingTimer1 = setTimeout(() => {
+    if (state.callCancelled) return;
+    document.getElementById('outgoing-status').textContent = '連接中…';
+    outgoingTimer2 = setTimeout(() => {
+      if (state.callCancelled) return;
+      startCall();
+    }, 1500);
+  }, 2000);
+}
+
+function renderDialPicker() {
+  const list = document.getElementById('dial-picker-list');
+  list.innerHTML = '';
+  if (!state.contacts.length) {
+    list.innerHTML = '<div class="no-contact">還沒有聯絡人</div>'; return;
+  }
+  state.contacts.forEach(c => {
+    const div = document.createElement('div'); div.className = 'contact-item';
+    const avatarHtml = (c.avatarData||c.avatarUrl)
+      ? `<div class="contact-avatar"><img src="${c.avatarData||c.avatarUrl}" /></div>`
+      : `<div class="contact-avatar">${c.emoji||'👤'}</div>`;
+    div.innerHTML = `${avatarHtml}<div class="contact-info"><div class="name">${c.nickname||c.name}</div><div class="note">${c.name}</div></div>`;
+    div.onclick = () => dialContact(c);
+    list.appendChild(div);
+  });
+}
+
+function acceptCall() { startCall(); }
+function rejectCall() { logCall('missed',0); showScreen('screen-home'); }
+function cancelCall() {
+  state.callCancelled = true;
+  clearTimeout(outgoingTimer1);
+  clearTimeout(outgoingTimer2);
+  showScreen('screen-home');
+}
+function callFromContact() { dialContact(state.contact); }
+
+function startCall() {
+  const c = state.contact;
+  document.getElementById('call-contact-name').textContent = c.nickname || c.name;
+  state.chatHistory = [];
+  state.callStart = new Date();
+  document.getElementById('chat-area').innerHTML = '';
+  showScreen('screen-call');
+  applyCallThemeForContact(c.id);
+  startTimer();
+  sendAIMessage(null, true);
+}
+
+function endCall() {
+  clearInterval(state.timerInterval);
+  const dur = Math.floor((new Date() - state.callStart) / 1000);
+  logCall('ended', dur);
+  showScreen('screen-home');
+  updateLogCount();
+}
+
+function logCall(type, dur) {
+  state.callLog.unshift({
+    type, dur,
+    name: state.contact?.nickname || state.contact?.name || '未知',
+    time: new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}),
+    date: new Date().toLocaleDateString('zh-TW'),
+    direction: state.currentCallType
+  });
+  saveAll();
+}
+
+function startTimer() {
+  clearInterval(state.timerInterval);
+  state.timerInterval = setInterval(() => {
+    const s = Math.floor((new Date()-state.callStart)/1000);
+    document.getElementById('call-timer').textContent =
+      String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  }, 1000);
+}
+
+// ============ CHAT ============
+function appendBubble(text, who, isTyping) {
+  const area = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = `bubble ${who}`;
+  if (isTyping) {
+    div.id = 'typing-bubble';
+    div.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
+  } else { div.textContent = text; }
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return div;
+}
+function removeTyping() { const t=document.getElementById('typing-bubble'); if(t) t.remove(); }
+function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
+function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
+
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim(); if(!text) return;
+  input.value=''; input.style.height='auto';
+  appendBubble(text,'me');
+  state.chatHistory.push({role:'user',content:text});
+  sendAIMessage(text,false);
+}
+
+async function sendAIMessage(userText, isOpener) {
+  const profile = getActiveProfile();
+  if (!profile || !profile.apiKey) {
+    appendBubble('（請先在設定填入 API Key）','system'); return;
+  }
+  appendBubble('','them',true);
+  const c = state.contact;
+  const mp = state.myProfile;
+  const now = new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+  const dur = state.callStart ? Math.floor((new Date()-state.callStart)/1000) : 0;
+  const durStr = dur<60?`${dur}秒`:`${Math.floor(dur/60)}分${dur%60}秒`;
+  const systemPrompt = [
+    c.system,
+    c.tone ? `【說話語氣】${c.tone}` : '',
+    `---`,
+    `現在時間：${now}。通話已進行：${durStr}。`,
+    mp.name ? `對方名字：${mp.name}。` : '',
+    mp.info ? `對方說明：${mp.info}` : ''
+  ].filter(Boolean).join('\n');
+
+  let messages = isOpener
+    ? [{role:'user',content:`[通話剛接通，${durStr}。請自然地打個招呼，簡短。]`}]
+    : [...state.chatHistory];
+
+  try {
+    const result = await callAPI(profile, systemPrompt, messages);
+    removeTyping();
+    appendBubble(result, 'them');
+    if (!isOpener) {
+      state.chatHistory.push({role:'assistant',content:result});
+    } else {
+      state.chatHistory = [
+        {role:'user',content:'[通話剛接通]'},
+        {role:'assistant',content:result}
+      ];
+    }
+  } catch(e) {
+    removeTyping();
+    appendBubble(`（連線失敗：${e.message}）`,'system');
+  }
+}
+
+async function callAPI(profile, system, messages) {
+  const svc = profile.service;
+  const key = profile.apiKey;
+  const model = profile.model;
+  const base = profile.baseUrl || SERVICE_URLS[svc] || SERVICE_URLS.openai;
+
+  if (svc === 'claude') {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({model, max_tokens:400, system, messages})
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error?.message||r.status);
+    return d.content[0].text;
+  } else if (svc === 'gemini') {
+    const contents = messages.map(m => ({role: m.role==='assistant'?'model':'user', parts:[{text:m.content}]}));
+    const url = `${base}/models/${model}:generateContent?key=${key}`;
+    const r = await fetch(url, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({system_instruction:{parts:[{text:system}]}, contents})
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error?.message||r.status);
+    return d.candidates[0].content.parts[0].text;
+  } else {
+    // OpenAI-compatible
+    const msgs = [{role:'system',content:system},...messages];
+    const url = `${base}/chat/completions`;
+    const headers = {'Content-Type':'application/json','Authorization':`Bearer ${key}`};
+    const r = await fetch(url, {method:'POST', headers, body:JSON.stringify({model, messages:msgs, max_tokens:400})});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error?.message||r.status);
+    return d.choices[0].message.content;
+  }
+}
+
+// ============ CALL BTNS ============
+function toggleMute() { document.getElementById('btn-mute').classList.toggle('active'); }
+function toggleSpeaker() { document.getElementById('btn-speaker').classList.toggle('active'); }
+function toggleSpotify() {
+  state.spotifyOpen = !state.spotifyOpen;
+  document.getElementById('spotify-panel').classList.toggle('hidden',!state.spotifyOpen);
+  document.getElementById('btn-spotify').classList.toggle('active',state.spotifyOpen);
+}
+
+// ============ SPOTIFY ============
+async function searchSpotify() {
+  const q = document.getElementById('spotify-search-input').value.trim(); if(!q) return;
+  const token = state.settings.spotify_token;
+  if (!token) { alert('請在設定填入 Spotify Access Token'); return; }
+  try {
+    const r = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=6`,
+      {headers:{Authorization:`Bearer ${token}`}});
+    const d = await r.json();
+    const tracks = d.tracks?.items || [];
+    const con = document.getElementById('spotify-results'); con.innerHTML='';
+    tracks.forEach(t => {
+      const div = document.createElement('div'); div.className='spotify-track';
+      div.innerHTML=`<div style="font-size:18px">🎵</div><div class="spotify-track-info"><div class="spotify-track-name">${t.name}</div><div class="spotify-track-artist">${t.artists.map(a=>a.name).join(', ')}</div></div>`;
+      div.onclick=()=>playTrack(t); con.appendChild(div);
+    });
+  } catch(e) { alert('搜尋失敗：'+e.message); }
+}
+
+async function playTrack(t) {
+  const token = state.settings.spotify_token;
+  try {
+    await fetch('https://api.spotify.com/v1/me/player/play',{
+      method:'PUT', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({uris:[t.uri]})
+    });
+    const np = document.getElementById('spotify-now-playing');
+    np.textContent=`▶ ${t.name} — ${t.artists[0].name}`;
+    np.classList.add('visible');
+  } catch(e) { alert('播放失敗，請確認裝置已開啟 Spotify'); }
+}
+
+function spotifyOAuth() {
+  alert('Spotify OAuth 需要後端伺服器支援。\n目前請到 open.spotify.com/get_access_token 取得臨時 token 後填入。');
+}
+
+// ============ API PROFILES ============
+function getActiveProfile() {
+  return state.apiProfiles.find(p=>p.id===state.activeProfileId) || state.apiProfiles[0];
+}
+
+function renderApiProfiles() {
+  const list = document.getElementById('api-profile-list'); list.innerHTML='';
+  state.apiProfiles.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'api-profile-item' + (p.id===state.activeProfileId?' active-profile':'');
+    div.innerHTML=`<div><div class="api-profile-name">${p.name}</div><div class="api-profile-meta">${p.service} · ${p.model||'—'}</div></div><div class="api-profile-actions"><button onclick="editApiProfile('${p.id}')" title="編輯">✏️</button><button onclick="activateApiProfile('${p.id}')" title="使用">✅</button><button onclick="deleteApiProfile('${p.id}')" title="刪除">🗑️</button></div>`;
+    list.appendChild(div);
+  });
+}
+
+function newApiProfile() {
+  state.editingProfileId = null;
+  document.getElementById('api-profile-name-input').value='';
+  document.getElementById('setting-service').value='claude';
+  document.getElementById('setting-apikey').value='';
+  document.getElementById('setting-model').value='claude-sonnet-4-6';
+  document.getElementById('setting-baseurl').value='';
+  document.getElementById('model-select').style.display='none';
+  document.getElementById('custom-url-row').style.display='none';
+}
+
+function editApiProfile(id) {
+  const p = state.apiProfiles.find(x=>x.id===id); if(!p) return;
+  state.editingProfileId = id;
+  document.getElementById('api-profile-name-input').value = p.name;
+  document.getElementById('setting-service').value = p.service;
+  document.getElementById('setting-apikey').value = p.apiKey;
+  document.getElementById('setting-model').value = p.model;
+  document.getElementById('setting-baseurl').value = p.baseUrl||'';
+  document.getElementById('custom-url-row').style.display = p.service==='custom'?'':'none';
+}
+
+function activateApiProfile(id) {
+  state.activeProfileId = id;
+  saveAll();
+  renderApiProfiles();
+  const p = state.apiProfiles.find(x=>x.id===id);
+  if (p) { /* home-call-label removed */ }
+}
+
+function deleteApiProfile(id) {
+  if (state.apiProfiles.length<=1) { alert('至少保留一個設定檔'); return; }
+  if (!confirm('刪除這個設定檔？')) return;
+  state.apiProfiles = state.apiProfiles.filter(p=>p.id!==id);
+  if (state.activeProfileId===id) state.activeProfileId = state.apiProfiles[0].id;
+  saveAll(); renderApiProfiles();
+}
+
+function saveApiProfile() {
+  const name = document.getElementById('api-profile-name-input').value.trim()||'未命名';
+  const service = document.getElementById('setting-service').value;
+  const apiKey = document.getElementById('setting-apikey').value.trim();
+  const model = document.getElementById('setting-model').value.trim();
+  const baseUrl = document.getElementById('setting-baseurl').value.trim();
+  if (state.editingProfileId) {
+    const idx = state.apiProfiles.findIndex(p=>p.id===state.editingProfileId);
+    if (idx>=0) state.apiProfiles[idx] = {...state.apiProfiles[idx], name, service, apiKey, model, baseUrl};
+  } else {
+    const newP = {id: Date.now().toString(), name, service, apiKey, model, baseUrl};
+    state.apiProfiles.push(newP);
+    state.activeProfileId = newP.id;
+    state.editingProfileId = newP.id;
+  }
+  saveAll(); renderApiProfiles();
+  alert('設定檔已儲存');
+}
+
+function onServiceChange() {
+  const svc = document.getElementById('setting-service').value;
+  document.getElementById('custom-url-row').style.display = svc==='custom'?'':'none';
+  const defaults = DEFAULT_MODELS[svc]||[];
+  if (defaults.length) document.getElementById('setting-model').value = defaults[0];
+}
+
+async function fetchModels() {
+  const svc = document.getElementById('setting-service').value;
+  const key = document.getElementById('setting-apikey').value.trim();
+  const base = document.getElementById('setting-baseurl').value.trim() || SERVICE_URLS[svc];
+  const sel = document.getElementById('model-select');
+  sel.innerHTML = '<option>載入中…</option>'; sel.style.display='';
+  try {
+    let models = [];
+    if (svc==='claude') {
+      const r = await fetch('https://api.anthropic.com/v1/models',{headers:{'x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'}});
+      const d = await r.json(); models = (d.data||[]).map(m=>m.id);
+    } else if (svc==='gemini') {
+      const r = await fetch(`${base}/models?key=${key}`);
+      const d = await r.json();
+      models = (d.models||[]).filter(m=>m.supportedGenerationMethods?.includes('generateContent')).map(m=>m.name.replace('models/',''));
+    } else {
+      const r = await fetch(`${base}/models`,{headers:{Authorization:`Bearer ${key}`}});
+      const d = await r.json();
+      models = (d.data||[]).map(m=>m.id);
+    }
+    if (!models.length) { sel.style.display='none'; alert('沒有拿到模型清單，請確認 API Key'); return; }
+    sel.innerHTML = models.map(m=>`<option value="${m}">${m}</option>`).join('');
+    sel.style.display='';
+  } catch(e) {
+    sel.style.display='none'; alert('拉取失敗：'+e.message);
+  }
+}
+
+// ============ CONTACTS ============
+function renderContacts() {
+  const list = document.getElementById('contacts-list'); list.innerHTML='';
+  if (!state.contacts.length) { list.innerHTML='<div class="no-contact">還沒有聯絡人</div>'; return; }
+  state.contacts.forEach(c => {
+    const div = document.createElement('div'); div.className='contact-item';
+    const avatarHtml = (c.avatarData||c.avatarUrl)
+      ? `<div class="contact-avatar"><img src="${c.avatarData||c.avatarUrl}" /></div>`
+      : `<div class="contact-avatar">${c.emoji||'👤'}</div>`;
+    div.innerHTML = `${avatarHtml}<div class="contact-info"><div class="name">${c.nickname||c.name}</div><div class="note">${c.name}</div></div>`;
+    div.onclick = () => openContactDetail(c);
+    list.appendChild(div);
+  });
+}
+
+function showAddContact() {
+  state.editingContactId = null;
+  state._pendingContactAvatarData = '';
+  document.getElementById('field-name').value='';
+  document.getElementById('field-nickname').value='';
+  document.getElementById('field-emoji').value='';
+  document.getElementById('field-avatar-url').value='';
+  document.getElementById('field-system').value='';
+  document.getElementById('field-tone').value='';
+  document.getElementById('detail-display-name').textContent='新聯絡人';
+  document.getElementById('detail-avatar-content').textContent='👤';
+  showScreen('screen-contact-detail');
+}
+
+function openContactDetail(c) {
+  state.editingContactId = c.id;
+  state._pendingContactAvatarData = '';
+  state.contact = c;
+  document.getElementById('field-name').value = c.name||'';
+  document.getElementById('field-nickname').value = c.nickname||'';
+  document.getElementById('field-emoji').value = c.emoji||'';
+  document.getElementById('field-avatar-url').value = c.avatarUrl||'';
+  document.getElementById('field-system').value = c.system||'';
+  document.getElementById('field-tone').value = c.tone||'';
+  document.getElementById('detail-display-name').textContent = c.nickname||c.name;
+  const ac = document.getElementById('detail-avatar-content');
+  if (c.avatarData||c.avatarUrl) {
+    ac.innerHTML = `<img src="${c.avatarData||c.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } else { ac.textContent = c.emoji||'👤'; }
+  showScreen('screen-contact-detail');
+}
+
+function saveContact() {
+  const name = document.getElementById('field-name').value.trim()||'未命名';
+  const nickname = document.getElementById('field-nickname').value.trim()||name;
+  const emoji = document.getElementById('field-emoji').value.trim()||'👤';
+  const avatarUrl = document.getElementById('field-avatar-url').value.trim();
+  const avatarData = state._pendingContactAvatarData||'';
+  const system = document.getElementById('field-system').value.trim();
+  const tone = document.getElementById('field-tone').value.trim();
+  const obj = {name,nickname,emoji,avatarUrl,avatarData,system,tone};
+  if (state.editingContactId) {
+    const idx = state.contacts.findIndex(c=>c.id===state.editingContactId);
+    if(idx>=0) state.contacts[idx]={...state.contacts[idx],...obj};
+  } else {
+    state.contacts.push({id:Date.now().toString(),...obj});
+  }
+  state.contact = state.contacts.find(c=>c.id===(state.editingContactId||state.contacts[state.contacts.length-1].id));
+  saveAll(); renderContacts(); showScreen('screen-contacts');
+}
+
+// ============ CALL LOG ============
+function renderLog() {
+  const list = document.getElementById('log-list');
+  if (!state.callLog.length) { list.innerHTML='<div class="no-log">還沒有通話紀錄</div>'; return; }
+  list.innerHTML='';
+  state.callLog.forEach(l => {
+    const div=document.createElement('div'); div.className='log-item';
+    const icon = l.type==='missed'?'📵':(l.direction==='incoming'?'📲':'📞');
+    const ds = l.dur ? `${Math.floor(l.dur/60)}:${String(l.dur%60).padStart(2,'0')}` : '—';
+    div.innerHTML=`<div class="log-icon">${icon}</div><div class="log-info"><div class="log-name">${l.name}</div><div class="log-meta">${l.date} ${l.time} · ${l.direction==='incoming'?'來電':'撥出'}</div></div><div class="log-duration">${ds}</div>`;
+    list.appendChild(div);
+  });
+}
+
+function updateLogCount() {
+  const el=document.getElementById('log-count-label');
+  if(el) el.textContent=state.callLog.length?`${state.callLog.length} 筆`:'—';
+}
+
+// ============ SETTINGS ============
+function loadSettingsUI() {
+  document.getElementById('toggle-autocall').classList.toggle('on', !!state.settings.autocall);
+  document.getElementById('setting-spotify-token').value = state.settings.spotify_token||'';
+}
+
+function saveGeneralSettings() {
+  state.settings.spotify_token = document.getElementById('setting-spotify-token').value.trim();
+  saveAll(); showScreen('screen-home');
+}
+
+function toggleAutocall() {
+  state.settings.autocall = !state.settings.autocall;
+  document.getElementById('toggle-autocall').classList.toggle('on', state.settings.autocall);
+  saveAll();
+}
+
+function exportSettings() {
+  const blob = new Blob([JSON.stringify({contacts:state.contacts,callLog:state.callLog,apiProfiles:state.apiProfiles,activeProfileId:state.activeProfileId,settings:state.settings,myProfile:state.myProfile,themes:state.themes,activeThemeVars:state.activeThemeVars},null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='companion-phone-backup.json'; a.click();
+}
+
+function importSettings() { document.getElementById('import-file').click(); }
+
+function loadImport(e) {
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try {
+      const d=JSON.parse(ev.target.result);
+      if(d.contacts) state.contacts=d.contacts;
+      if(d.callLog) state.callLog=d.callLog;
+      if(d.apiProfiles) state.apiProfiles=d.apiProfiles;
+      if(d.activeProfileId) state.activeProfileId=d.activeProfileId;
+      if(d.settings) state.settings={...state.settings,...d.settings};
+      if(d.myProfile) state.myProfile={...state.myProfile,...d.myProfile};
+      if(d.themes) state.themes=d.themes;
+      if(d.activeThemeVars) { state.activeThemeVars=d.activeThemeVars; applyThemeVars(state.activeThemeVars); }
+      saveAll(); renderAll(); alert('匯入成功');
+    } catch { alert('匯入失敗'); }
+  };
+  reader.readAsText(file); e.target.value='';
+}
+
+function clearAll() {
+  if(confirm('確定清除所有資料？')) { localStorage.removeItem('cp2-main'); location.reload(); }
+}
+
+// ============ MY PROFILE ============
+function loadMyProfileUI() {
+  const mp=state.myProfile;
+  document.getElementById('my-name-input').value=mp.name||'';
+  document.getElementById('my-info-input').value=mp.info||'';
+  document.getElementById('my-avatar-url').value=mp.avatarUrl||'';
+  document.getElementById('my-display-name').textContent=mp.name||'我';
+  const ac=document.getElementById('my-avatar-content');
+  if(mp.avatarData||mp.avatarUrl) {
+    ac.innerHTML=`<img src="${mp.avatarData||mp.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } else { ac.textContent='👤'; }
+}
+
+function saveMyProfile() {
+  state.myProfile.name=document.getElementById('my-name-input').value.trim();
+  state.myProfile.info=document.getElementById('my-info-input').value.trim();
+  state.myProfile.avatarUrl=document.getElementById('my-avatar-url').value.trim();
+  saveAll(); updateHomeGreeting(); updateHomeMyAvatar(); showScreen('screen-settings');
+}
+
+// ============ THEME ============
+const THEME_VARS = [
+  { var:'--color-bg', label:'背景色', type:'color' },
+  { var:'--color-surface', label:'卡片底色', type:'color' },
+  { var:'--color-surface-2', label:'卡片底色 2', type:'color' },
+  { var:'--color-border', label:'邊框色', type:'color' },
+  { var:'--color-accent', label:'主色調', type:'color' },
+  { var:'--color-accent-dim', label:'主色調（暗）', type:'color' },
+  { var:'--color-text', label:'主要文字', type:'color' },
+  { var:'--color-text-dim', label:'次要文字', type:'color' },
+  { var:'--color-text-muted', label:'淡化文字', type:'color' },
+  { var:'--color-danger', label:'危險/結束', type:'color' },
+  { var:'--color-green', label:'接聽/確認', type:'color' },
+];
+const RADIUS_VARS = [
+  { var:'--radius-btn', label:'通話按鈕圓角（50%=圓形，0px=方形）', type:'text' },
+  { var:'--radius-card', label:'卡片圓角', type:'text' },
+  { var:'--radius-bubble', label:'對話泡泡圓角', type:'text' },
+  { var:'--radius-input', label:'輸入框圓角', type:'text' },
+  { var:'--radius-phone', label:'手機外框圓角', type:'text' },
+];
+
+function getCurrentThemeVars() {
+  const result = {};
+  [...THEME_VARS,...RADIUS_VARS].forEach(v => {
+    result[v.var] = getComputedStyle(document.documentElement).getPropertyValue(v.var).trim();
+  });
+  return result;
+}
+
+function applyThemeVars(vars) {
+  Object.entries(vars).forEach(([k,v]) => {
+    document.documentElement.style.setProperty(k,v);
+  });
+}
+
+function renderThemeScreen() {
+  // presets
+  const pg = document.getElementById('theme-preset-grid'); pg.innerHTML='';
+  PRESET_THEMES.forEach((t,i) => {
+    const div=document.createElement('div'); div.className='theme-preset';
+    div.style.background=t.vars['--color-bg'];
+    div.innerHTML=`<div class="theme-color-dots">${t.dots.map(c=>`<div class="theme-dot" style="background:${c}"></div>`).join('')}</div><div class="theme-preset-name" style="color:${t.vars['--color-text']}">${t.name}</div>`;
+    div.onclick=()=>applyPreset(t);
+    pg.appendChild(div);
+  });
+
+  // color vars
+  const vl=document.getElementById('theme-var-list'); vl.innerHTML='';
+  THEME_VARS.forEach(v => {
+    const cur = getComputedStyle(document.documentElement).getPropertyValue(v.var).trim();
+    const row=document.createElement('div'); row.className='theme-var-row';
+    row.innerHTML=`<div class="theme-var-label">${v.label}<div class="theme-var-sub">${v.var}</div></div><div class="theme-var-right"><div class="color-swatch" style="background:${cur}" onclick="this.nextElementSibling.click()"></div><input type="color" class="color-input-hidden" value="${cur.length===7?cur:'#000000'}" onchange="updateVar('${v.var}',this.value);this.previousElementSibling.style.background=this.value" /></div>`;
+    vl.appendChild(row);
+  });
+
+  // radius vars
+  const rl=document.getElementById('theme-radius-list'); rl.innerHTML='';
+  RADIUS_VARS.forEach(v => {
+    const cur = getComputedStyle(document.documentElement).getPropertyValue(v.var).trim();
+    const row=document.createElement('div'); row.className='theme-var-row';
+    row.innerHTML=`<div class="theme-var-label">${v.label}<div class="theme-var-sub">${v.var}</div></div><div class="theme-var-right"><input class="radius-input" type="text" value="${cur}" onchange="updateVar('${v.var}',this.value)" /></div>`;
+    rl.appendChild(row);
+  });
+}
+
+function updateVar(varName, value) {
+  document.documentElement.style.setProperty(varName, value);
+  state.activeThemeVars[varName] = value;
+}
+
+function applyPreset(t) {
+  applyThemeVars(t.vars);
+  state.activeThemeVars = {...t.vars};
+  saveAll();
+  renderThemeScreen();
+}
+
+function saveTheme() {
+  const name=document.getElementById('theme-save-name').value.trim();
+  if(!name) { alert('請輸入名稱'); return; }
+  const vars=getCurrentThemeVars();
+  state.themes.push({id:Date.now().toString(),name,vars});
+  saveAll(); renderSavedThemes();
+  document.getElementById('theme-save-name').value='';
+}
+
+function renderSavedThemes() {
+  const list=document.getElementById('saved-theme-list'); list.innerHTML='';
+  state.themes.forEach(t=>{
+    const div=document.createElement('div'); div.className='saved-theme-item';
+    div.innerHTML=`<div class="saved-theme-name">${t.name}</div><div class="saved-theme-actions"><button onclick="applySavedTheme('${t.id}')" title="套用">✅</button><button onclick="deleteSavedTheme('${t.id}')" title="刪除">🗑️</button></div>`;
+    list.appendChild(div);
+  });
+}
+
+function applySavedTheme(id) {
+  const t=state.themes.find(x=>x.id===id); if(!t) return;
+  applyThemeVars(t.vars); state.activeThemeVars={...t.vars};
+  saveAll(); renderThemeScreen();
+}
+
+function deleteSavedTheme(id) {
+  state.themes=state.themes.filter(t=>t.id!==id); saveAll(); renderSavedThemes();
+}
+
+function resetTheme() {
+  applyThemeVars(DEFAULT_THEME); state.activeThemeVars={...DEFAULT_THEME};
+  saveAll(); renderThemeScreen();
+}
+
+// ============ THEME HOME ============
+function applyThemeHome() {
+  const th = state.themeHome;
+  const el = document.getElementById('screen-home');
+  if (th.bgData || th.bgUrl) {
+    el.style.backgroundImage = `url('${th.bgData || th.bgUrl}')`;
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+  } else {
+    el.style.backgroundImage = '';
+  }
+  document.getElementById('home-custom-style').textContent =
+    th.css ? `#screen-home { ${th.css} }` : '';
+}
+
+function loadThemeHomeUI() {
+  const th = state.themeHome;
+  document.getElementById('home-bg-url').value = th.bgUrl || '';
+  document.getElementById('home-css-input').value = th.css || '';
+}
+
+function previewHomeBg() {
+  const url = document.getElementById('home-bg-url').value.trim();
+  const el = document.getElementById('screen-home');
+  if (url) { el.style.backgroundImage = `url('${url}')`; el.style.backgroundSize='cover'; el.style.backgroundPosition='center'; }
+  else { el.style.backgroundImage = ''; }
+}
+
+function handleHomeBgFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    state.themeHome.bgData = ev.target.result;
+    document.getElementById('home-bg-url').value = '';
+    document.getElementById('screen-home').style.backgroundImage = `url('${ev.target.result}')`;
+    document.getElementById('screen-home').style.backgroundSize = 'cover';
+    document.getElementById('screen-home').style.backgroundPosition = 'center';
+  };
+  r.readAsDataURL(file); e.target.value = '';
+}
+
+function livePreviewHomeCss() {
+  const css = document.getElementById('home-css-input').value;
+  document.getElementById('home-custom-style').textContent = css ? `#screen-home { ${css} }` : '';
+}
+
+function insertHomeCssExample() {
+  document.getElementById('home-css-input').value =
+`/* 毛玻璃效果（需要先設定背景圖）*/
+backdrop-filter: blur(12px);
+-webkit-backdrop-filter: blur(12px);
+background-color: rgba(0,0,0,0.3) !important;`;
+  livePreviewHomeCss();
+}
+
+function exportHomeCss() {
+  const css = document.getElementById('home-css-input').value;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([css],{type:'text/css'}));
+  a.download = 'home-theme.css'; a.click();
+}
+
+function importHomeCss(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => { document.getElementById('home-css-input').value = ev.target.result; livePreviewHomeCss(); };
+  r.readAsText(file); e.target.value = '';
+}
+
+function saveThemeHome() {
+  state.themeHome.bgUrl = document.getElementById('home-bg-url').value.trim();
+  state.themeHome.css = document.getElementById('home-css-input').value;
+  if (!document.getElementById('home-bg-url').value.trim()) state.themeHome.bgData = state.themeHome.bgData || '';
+  saveAll(); applyThemeHome(); showScreen('screen-theme');
+}
+
+function resetThemeHome() {
+  state.themeHome = { bgUrl:'', bgData:'', css:'' };
+  saveAll(); applyThemeHome(); loadThemeHomeUI();
+}
+
+// ============ THEME CALL ============
+function openThemeCall() {
+  renderThemeCallPicker();
+  showScreen('screen-theme-call-pick');
+}
+
+function renderThemeCallPicker() {
+  const list = document.getElementById('theme-call-contact-list');
+  list.innerHTML = '';
+  if (!state.contacts.length) { list.innerHTML='<div class="no-contact">請先新增聯絡人</div>'; return; }
+  state.contacts.forEach(c => {
+    const div = document.createElement('div'); div.className='contact-item';
+    const av = (c.avatarData||c.avatarUrl) ? `<div class="contact-avatar"><img src="${c.avatarData||c.avatarUrl}" /></div>` : `<div class="contact-avatar">${c.emoji||'👤'}</div>`;
+    div.innerHTML = `${av}<div class="contact-info"><div class="name">${c.nickname||c.name}</div></div>`;
+    div.onclick = () => openThemeCallEditor(c);
+    list.appendChild(div);
+  });
+}
+
+function openThemeCallEditor(c) {
+  state.themeCallContactId = c.id;
+  document.getElementById('theme-call-title').textContent = `通話頁 — ${c.nickname||c.name}`;
+  const tc = state.themeCall[c.id] || {};
+  document.getElementById('call-bg-url').value = tc.bgUrl || '';
+  document.getElementById('call-css-input').value = tc.css || '';
+  document.getElementById('bubble-css-input').value = tc.bubbleCss || '';
+  livePreviewBubbleCss();
+  showScreen('screen-theme-call');
+}
+
+function previewCallBg() {
+  const url = document.getElementById('call-bg-url').value.trim();
+  const el = document.getElementById('screen-call');
+  if (url) { el.style.backgroundImage=`url('${url}')`; el.style.backgroundSize='cover'; el.style.backgroundPosition='center'; }
+  else { el.style.backgroundImage=''; }
+}
+
+function handleCallBgFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    const id = state.themeCallContactId;
+    if (!state.themeCall[id]) state.themeCall[id] = {};
+    state.themeCall[id].bgData = ev.target.result;
+    document.getElementById('call-bg-url').value = '';
+  };
+  r.readAsDataURL(file); e.target.value = '';
+}
+
+function livePreviewCallCss() {
+  const css = document.getElementById('call-css-input').value;
+  document.getElementById('call-custom-style').textContent = css ? `#screen-call { ${css} }` : '';
+}
+
+function livePreviewBubbleCss() {
+  const css = document.getElementById('bubble-css-input').value;
+  const preview = document.getElementById('bubble-preview-area');
+  // Apply to preview bubbles
+  document.getElementById('bubble-custom-style').textContent = css || '';
+  // Also style the preview div's children live
+  if (preview) {
+    const styleId = 'bubble-preview-live';
+    let s = document.getElementById(styleId);
+    if (!s) { s = document.createElement('style'); s.id = styleId; document.head.appendChild(s); }
+    s.textContent = css || '';
+  }
+}
+
+function insertCallCssExample() {
+  document.getElementById('call-css-input').value =
+`/* 通話頁半透明毛玻璃 */
+background: rgba(10,10,15,0.85) !important;
+backdrop-filter: blur(20px);
+-webkit-backdrop-filter: blur(20px);`;
+  livePreviewCallCss();
+}
+
+function insertBubbleCssExample() {
+  document.getElementById('bubble-css-input').value =
+`.bubble.them {
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.18);
+}
+.bubble.me {
+  background: rgba(123,110,246,0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}`;
+  livePreviewBubbleCss();
+}
+
+function exportCallCss() {
+  const css = document.getElementById('call-css-input').value + '\n\n/* bubble */\n' + document.getElementById('bubble-css-input').value;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([css],{type:'text/css'}));
+  a.download = 'call-theme.css'; a.click();
+}
+
+function exportBubbleCss() {
+  const css = document.getElementById('bubble-css-input').value;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([css],{type:'text/css'}));
+  a.download = 'bubble-theme.css'; a.click();
+}
+
+function importCallCss(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => { document.getElementById('call-css-input').value = ev.target.result; livePreviewCallCss(); };
+  r.readAsText(file); e.target.value = '';
+}
+
+function importBubbleCss(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => { document.getElementById('bubble-css-input').value = ev.target.result; livePreviewBubbleCss(); };
+  r.readAsText(file); e.target.value = '';
+}
+
+function saveThemeCall() {
+  const id = state.themeCallContactId; if (!id) return;
+  if (!state.themeCall[id]) state.themeCall[id] = {};
+  state.themeCall[id].bgUrl = document.getElementById('call-bg-url').value.trim();
+  state.themeCall[id].css = document.getElementById('call-css-input').value;
+  state.themeCall[id].bubbleCss = document.getElementById('bubble-css-input').value;
+  saveAll();
+  applyCallThemeForContact(id);
+  showScreen('screen-theme-call-pick');
+}
+
+function resetThemeCall() {
+  const id = state.themeCallContactId; if (!id) return;
+  state.themeCall[id] = { bgUrl:'', bgData:'', css:'', bubbleCss:'' };
+  saveAll();
+  openThemeCallEditor(state.contacts.find(c=>c.id===id));
+}
+
+function applyCallThemeForContact(id) {
+  const tc = state.themeCall[id] || {};
+  const el = document.getElementById('screen-call');
+  if (tc.bgData || tc.bgUrl) {
+    el.style.backgroundImage = `url('${tc.bgData||tc.bgUrl}')`;
+    el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center';
+  } else { el.style.backgroundImage = ''; }
+  document.getElementById('call-custom-style').textContent = tc.css ? `#screen-call { ${tc.css} }` : '';
+  document.getElementById('bubble-custom-style').textContent = tc.bubbleCss || '';
+}
+
+function applyAllCustomThemes() {
+  applyThemeHome();
+  const active = state.contact;
+  if (active) applyCallThemeForContact(active.id);
+}
+
+// ============ START ============
+init();
+</script>
+</body>
+</html>
