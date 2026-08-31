@@ -2362,6 +2362,13 @@ function applyAllCustomThemes() {
 
 // ============ START ============
 init();
+
+// Service Worker 註冊（PWA 自動更新）
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
