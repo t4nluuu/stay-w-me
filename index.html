@@ -41,15 +41,24 @@ body {
   background: #06060c;
   display: flex; align-items: center; justify-content: center;
   min-height: 100vh; overflow: hidden;
-  /* 防止長按選字 */
+}
+/* 防止長按選字，但不阻擋 touch 拖曳 */
+#phone {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
 }
-/* 輸入框和 textarea 保留可選取 */
+/* 輸入框保留可選取和輸入 */
 input, textarea, [contenteditable] {
   -webkit-user-select: text;
   user-select: text;
+  -webkit-touch-callout: default;
+}
+/* app icon 允許 touch 事件正常觸發 */
+.app-icon, .app-slot {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
 }
 #phone {
   width: var(--phone-w); height: var(--phone-h);
@@ -191,7 +200,7 @@ input, textarea, [contenteditable] {
   box-shadow: 0 0 40px rgba(123,110,246,.4);
   overflow: hidden;
 }
-.incoming-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.incoming-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
 .incoming-name { font-size: 32px; font-weight: 600; color: var(--color-text); text-align: center; }
 .incoming-status { font-size: 16px; color: var(--color-text-dim); text-align: center; margin-top: 6px; }
 .incoming-actions { display: flex; justify-content: space-around; width: 100%; align-items: center; }
@@ -219,7 +228,7 @@ input, textarea, [contenteditable] {
   box-shadow: 0 0 40px rgba(123,110,246,.3);
   animation: pulse 2s infinite; overflow: hidden;
 }
-.outgoing-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.outgoing-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
 @keyframes pulse { 0%,100%{box-shadow:0 0 40px rgba(123,110,246,.3)} 50%{box-shadow:0 0 60px rgba(123,110,246,.5)} }
 .outgoing-name { font-size: 32px; font-weight: 600; color: var(--color-text); text-align: center; }
 .outgoing-status { font-size: 16px; color: var(--color-text-dim); text-align: center; margin-top: 6px; }
@@ -283,7 +292,7 @@ input, textarea, [contenteditable] {
 .contact-item { display: flex; align-items: center; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--color-border); cursor: pointer; }
 .contact-item:active { background: var(--color-surface); }
 .contact-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dim)); display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; flex-shrink: 0; overflow: hidden; }
-.contact-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.contact-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .contact-info .name { font-size: 16px; font-weight: 600; color: var(--color-text); }
 .contact-info .note { font-size: 13px; color: var(--color-text-dim); margin-top: 2px; }
 .no-contact { text-align: center; color: var(--color-text-muted); padding: 60px 24px; font-size: 14px; }
@@ -292,7 +301,7 @@ input, textarea, [contenteditable] {
 #screen-contact-detail { background: var(--color-bg); }
 .contact-detail-header { padding: 50px 24px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; flex-shrink: 0; position: relative; }
 .contact-detail-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dim)); display: flex; align-items: center; justify-content: center; font-size: 32px; color: white; cursor: pointer; overflow: hidden; position: relative; }
-.contact-detail-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.contact-detail-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .avatar-edit-hint { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,.5); font-size: 10px; color: white; text-align: center; padding: 3px 0; border-radius: 0 0 50% 50%; }
 .contact-detail-name { font-size: 24px; font-weight: 700; color: var(--color-text); }
 .contact-back { position: absolute; left: 20px; top: 50px; font-size: 16px; color: var(--color-accent); cursor: pointer; padding: 4px; }
@@ -484,7 +493,7 @@ select.settings-input { cursor: pointer; }
   <div id="screen-incoming" class="screen">
     <div></div>
     <div>
-      <div class="incoming-avatar" id="incoming-avatar"><span id="incoming-avatar-content">🌙</span></div>
+      <div class="incoming-avatar" id="incoming-avatar"><div id="incoming-avatar-content" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;">🌙</div></div>
       <div class="incoming-name" id="incoming-name">言</div>
       <div class="incoming-status">來電中…</div>
     </div>
@@ -513,7 +522,7 @@ select.settings-input { cursor: pointer; }
   <div id="screen-outgoing" class="screen">
     <div></div>
     <div>
-      <div class="outgoing-avatar" id="outgoing-avatar"><span id="outgoing-avatar-content">🌙</span></div>
+      <div class="outgoing-avatar" id="outgoing-avatar"><div id="outgoing-avatar-content" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;">🌙</div></div>
       <div class="outgoing-name" id="outgoing-name">言</div>
       <div class="outgoing-status" id="outgoing-status">撥號中…</div>
     </div>
@@ -931,7 +940,7 @@ select.settings-input { cursor: pointer; }
     <div class="my-profile-header">
       <div class="my-profile-back" onclick="showScreen('screen-settings')">‹ 返回</div>
       <div class="my-avatar-large" id="my-avatar-large" onclick="openAvatarPicker('me')">
-        <span id="my-avatar-content">👤</span>
+        <div id="my-avatar-content" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;">👤</div>
         <div class="avatar-edit-hint">更換</div>
       </div>
       <div style="font-size:18px;font-weight:700;color:var(--color-text)" id="my-display-name">我</div>
@@ -1033,24 +1042,92 @@ let state = {
   editingProfileId: null,
 };
 
+// ============ INDEXEDDB（圖片儲存）============
+const IDB_NAME = 'cp2-images';
+const IDB_STORE = 'images';
+let idb = null;
+
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    if (idb) { resolve(idb); return; }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+    req.onsuccess = e => { idb = e.target.result; resolve(idb); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSet(key, value) {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(value, key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function idbGet(key) {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = () => resolve(req.result || '');
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbDel(key) {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 // ============ STORAGE ============
 function saveAll() {
+  // 把所有圖片 data 從 state 剝離，只存文字到 localStorage
+  const contactsClean = state.contacts.map(c => {
+    const { avatarData, ...rest } = c;
+    return rest;
+  });
+  const myProfileClean = { ...state.myProfile, avatarData: '' };
+  const themeHomeClean = { ...state.themeHome, bgData: '', lockBgData: '' };
+  const themeCallClean = {};
+  Object.entries(state.themeCall).forEach(([id, tc]) => {
+    themeCallClean[id] = { ...tc, bgData: '' };
+  });
+
   localStorage.setItem('cp2-main', JSON.stringify({
-    contacts: state.contacts,
+    contacts: contactsClean,
     callLog: state.callLog,
     apiProfiles: state.apiProfiles,
     activeProfileId: state.activeProfileId,
     settings: state.settings,
-    myProfile: state.myProfile,
+    myProfile: myProfileClean,
     themes: state.themes,
     activeThemeVars: state.activeThemeVars,
     appLayout: state.appLayout,
-    themeHome: state.themeHome,
-    themeCall: state.themeCall,
+    themeHome: themeHomeClean,
+    themeCall: themeCallClean,
   }));
+
+  // 圖片非同步存入 IndexedDB
+  state.contacts.forEach(c => {
+    if (c.avatarData) idbSet(`contact-avatar-${c.id}`, c.avatarData);
+  });
+  if (state.myProfile.avatarData) idbSet('my-avatar', state.myProfile.avatarData);
+  if (state.themeHome.bgData)     idbSet('home-bg', state.themeHome.bgData);
+  if (state.themeHome.lockBgData) idbSet('lock-bg', state.themeHome.lockBgData);
+  Object.entries(state.themeCall).forEach(([id, tc]) => {
+    if (tc.bgData) idbSet(`call-bg-${id}`, tc.bgData);
+  });
 }
 
-function loadAll() {
+async function loadAll() {
   const raw = localStorage.getItem('cp2-main');
   if (raw) {
     const d = JSON.parse(raw);
@@ -1066,6 +1143,20 @@ function loadAll() {
     state.themeHome = { bgUrl:'', bgData:'', lockBgUrl:'', lockBgData:'', css:'', globalCss:'', glassBlur:0, glassOpacity:100, glassShadow:0, glassLight:0, ...(d.themeHome||{}) };
     state.themeCall = d.themeCall || {};
   }
+
+  // 從 IndexedDB 回填圖片
+  await Promise.all([
+    ...state.contacts.map(async c => {
+      c.avatarData = await idbGet(`contact-avatar-${c.id}`);
+    }),
+    (async () => { state.myProfile.avatarData = await idbGet('my-avatar'); })(),
+    (async () => { state.themeHome.bgData     = await idbGet('home-bg'); })(),
+    (async () => { state.themeHome.lockBgData = await idbGet('lock-bg'); })(),
+    ...Object.keys(state.themeCall).map(async id => {
+      state.themeCall[id].bgData = await idbGet(`call-bg-${id}`);
+    }),
+  ]);
+
   if (!state.contacts.length) {
     state.contacts.push({
       id: 'default', name: '言', nickname: '言', emoji: '🌙',
@@ -1085,8 +1176,8 @@ function loadAll() {
 }
 
 // ============ INIT ============
-function init() {
-  loadAll();
+async function init() {
+  await loadAll();
   updateClock();
   setInterval(updateClock, 1000);
   applyThemeVars(state.activeThemeVars);
@@ -1578,10 +1669,12 @@ function triggerIncomingCall() {
 // ============ AVATAR HELPERS ============
 function setCallAvatarEl(elId, contact) {
   const el = document.getElementById(elId);
+  if (!el) return;
   if (contact.avatarData || contact.avatarUrl) {
-    el.innerHTML = `<img src="${contact.avatarData || contact.avatarUrl}" />`;
+    el.innerHTML = `<img src="${contact.avatarData || contact.avatarUrl}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:50%;" />`;
   } else {
-    el.textContent = contact.emoji || '👤';
+    el.style.fontSize = '40px';
+    el.innerHTML = contact.emoji || '👤';
   }
 }
 
@@ -2055,13 +2148,16 @@ function saveContact() {
   }
 
   const obj = {name, nickname, emoji, avatarUrl, avatarData, system, tone};
+  let savedId;
   if (state.editingContactId) {
     const idx = state.contacts.findIndex(c => c.id === state.editingContactId);
     if (idx >= 0) state.contacts[idx] = {...state.contacts[idx], ...obj};
+    savedId = state.editingContactId;
   } else {
-    state.contacts.push({id: Date.now().toString(), ...obj});
+    savedId = Date.now().toString();
+    state.contacts.push({id: savedId, ...obj});
   }
-  state.contact = state.contacts.find(c => c.id === (state.editingContactId || state.contacts[state.contacts.length-1].id));
+  state.contact = state.contacts.find(c => c.id === savedId) || state.contacts[0];
   saveAll();
   renderContacts();
   renderThemeCallInline();
@@ -2073,8 +2169,8 @@ function deleteContact() {
   const c = state.contacts.find(c => c.id === state.editingContactId);
   const name = c?.nickname || c?.name || '這位聯絡人';
   confirmDelete(`確定刪除「${name}」？\n刪除後無法復原。`, () => {
+    idbDel(`contact-avatar-${state.editingContactId}`);
     state.contacts = state.contacts.filter(c => c.id !== state.editingContactId);
-    // 如果刪的是目前通話對象，換成第一個
     if (state.contact?.id === state.editingContactId) {
       state.contact = state.contacts[0] || null;
     }
@@ -2158,7 +2254,7 @@ function loadMyProfileUI() {
   const ac=document.getElementById('my-avatar-content');
   if(mp.avatarData||mp.avatarUrl) {
     ac.innerHTML=`<img src="${mp.avatarData||mp.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-  } else { ac.textContent='👤'; }
+  } else { ac.innerHTML='👤'; }
 }
 
 function saveMyProfile() {
@@ -2321,8 +2417,15 @@ function deleteApiProfile(id) {
 }
 
 function clearAll() {
-  confirmDelete('確定清除所有資料？\n（聯絡人、紀錄、設定都會消失）', () => {
-    localStorage.removeItem('cp2-main'); location.reload();
+  confirmDelete('確定清除所有資料？\n（聯絡人、紀錄、設定都會消失）', async () => {
+    localStorage.removeItem('cp2-main');
+    // 清除 IndexedDB
+    try {
+      const db = await openIDB();
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).clear();
+      tx.oncomplete = () => location.reload();
+    } catch { location.reload(); }
   });
 }
 
@@ -2541,8 +2644,8 @@ function applyGlassStyle(blur, opacity, shadow, light) {
     ? `rgba(0,0,0,${Math.max(0, op - 0.3).toFixed(2)})`
     : `rgba(255,255,255,${op.toFixed(2)})`;
   const glassDock = isDark
-    ? `rgba(0,0,0,${Math.max(0, op - 0.5).toFixed(2)})`
-    : `rgba(255,255,255,${Math.max(0, op - 0.3).toFixed(2)})`;
+    ? `rgba(0,0,0,${Math.max(0, op - 0.3).toFixed(2)})`
+    : `rgba(255,255,255,${op.toFixed(2)})`;
 
   // 外陰影
   const outerShadow = shadow > 0
@@ -2602,20 +2705,19 @@ function updateGlassPreview(blur, op, outerShadow, boxShadow, borderTop, borderL
   const dock  = document.querySelector('.glass-preview-dock');
   if (!icons.length) return;
 
-  const bg = op < 1
-    ? `rgba(255,255,255,${op.toFixed(2)})`
-    : 'rgba(255,255,255,0.25)';
+  // 統一用傳入的 op 值，預覽背景固定有漸層，所以 backdrop 有東西可以作用
+  const bg = `rgba(255,255,255,${op.toFixed(2)})`;
   const filterVal = blur > 0 ? `blur(${blur}px)` : 'none';
 
   icons.forEach(icon => {
-    icon.style.background       = bg;
-    icon.style.backdropFilter   = filterVal;
+    icon.style.background           = bg;
+    icon.style.backdropFilter       = filterVal;
     icon.style.webkitBackdropFilter = filterVal;
-    icon.style.boxShadow        = boxShadow !== 'none' ? boxShadow : '';
-    icon.style.borderTop        = borderTop;
-    icon.style.borderLeft       = borderLeft;
-    icon.style.borderBottom     = borderBottom;
-    icon.style.borderRight      = borderRight;
+    icon.style.boxShadow            = boxShadow !== 'none' ? boxShadow : '';
+    icon.style.borderTop            = borderTop;
+    icon.style.borderLeft           = borderLeft;
+    icon.style.borderBottom         = borderBottom;
+    icon.style.borderRight          = borderRight;
   });
   if (dock) {
     dock.style.background           = glassDock;
