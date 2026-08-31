@@ -65,15 +65,26 @@ body {
 
 /* ---- LOCK ---- */
 #screen-lock {
-  background: linear-gradient(160deg, #0d0d1a 0%, #0a0a14 60%, #0f0a1a 100%);
+  background: var(--color-bg);
   align-items: center; justify-content: space-between;
   padding: 60px 0 50px; user-select: none;
   overflow: hidden; position: absolute; inset: 0;
   transition: transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
 }
-.lock-time { text-align: center; color: var(--color-text); }
-.lock-time .hour { font-size: 80px; font-weight: 200; letter-spacing: -2px; line-height: 1; }
-.lock-time .date-label { font-size: 16px; color: var(--color-text-dim); margin-top: 6px; }
+.lock-time { text-align: center; color: var(--color-text); padding: 0 24px; }
+.lock-time .date-label {
+  font-size: 17px; font-weight: 400;
+  color: var(--color-text);
+  margin-bottom: 4px;
+  letter-spacing: .1px;
+}
+.lock-time .hour {
+  font-size: clamp(80px, 22vw, 96px);
+  font-weight: 700;
+  letter-spacing: -3px;
+  line-height: 1;
+  color: var(--color-text);
+}
 .lock-notification {
   background: rgba(255,255,255,.07); backdrop-filter: blur(20px);
   border: 1px solid rgba(255,255,255,.1); border-radius: var(--radius-card);
@@ -378,17 +389,21 @@ select.settings-input { cursor: pointer; }
     height: 100dvh;
     border-radius: 0;
     border: none;
-    /* iPhone safe area — 瀏海和 Home Bar */
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
-  /* 桌面模擬用的瀏海裝飾在手機上隱藏 */
   #phone::before { display: none; }
-  /* lock screen 在 PWA 全螢幕補一點頂部間距 */
-  #screen-lock { padding-top: 70px; }
-  #screen-home { padding-top: 8px; }
+  /* 補 status bar 高度讓內容不貼頂 */
+  #screen-lock { padding-top: max(60px, calc(env(safe-area-inset-top) + 20px)); }
+  #screen-home { padding-top: max(8px, env(safe-area-inset-top)); }
+  .screen-header { padding-top: max(50px, calc(env(safe-area-inset-top) + 14px)); }
+  .contact-detail-header { padding-top: max(50px, calc(env(safe-area-inset-top) + 14px)); }
+  .my-profile-header { padding-top: max(50px, calc(env(safe-area-inset-top) + 14px)); }
+  .contact-back { top: max(50px, calc(env(safe-area-inset-top) + 14px)); }
+  .my-profile-back { top: max(50px, calc(env(safe-area-inset-top) + 14px)); }
+  .call-header { padding-top: max(50px, calc(env(safe-area-inset-top) + 14px)); }
 }
 </style>
 <style id="home-custom-style"></style>
@@ -402,8 +417,8 @@ select.settings-input { cursor: pointer; }
   <!-- LOCK -->
   <div id="screen-lock" class="screen active">
     <div class="lock-time">
+      <div class="date-label" id="lock-date-display">9月1日週二</div>
       <div class="hour" id="lock-time-display">12:00</div>
-      <div class="date-label" id="lock-date-display">星期一 8月31日</div>
     </div>
     <div class="lock-notification" id="lock-notification">
       <div class="lock-notif-header">
@@ -725,6 +740,7 @@ select.settings-input { cursor: pointer; }
       <div style="display:flex;gap:6px;margin-bottom:6px;">
         <button class="settings-btn" style="margin:0;flex:1;" onclick="exportGlobalCss()">匯出</button>
         <button class="settings-btn" style="margin:0;flex:1;" onclick="document.getElementById('global-css-import').click()">匯入</button>
+        <button class="settings-btn danger" style="margin:0;flex:1;" onclick="clearGlobalCss()">清除</button>
         <input type="file" id="global-css-import" accept=".css,.txt" style="display:none" onchange="importGlobalCss(event)" />
       </div>
       <textarea id="global-css-input" placeholder="/* 在這裡輸入全局 CSS … */" rows="6"
@@ -775,6 +791,7 @@ select.settings-input { cursor: pointer; }
       <div style="display:flex;gap:6px;margin-bottom:6px;">
         <button class="settings-btn" style="margin:0;flex:1;" onclick="exportCallCss()">匯出</button>
         <button class="settings-btn" style="margin:0;flex:1;" onclick="document.getElementById('call-css-import').click()">匯入</button>
+        <button class="settings-btn danger" style="margin:0;flex:1;" onclick="clearCallCss()">清除</button>
         <input type="file" id="call-css-import" accept=".css,.txt" style="display:none" onchange="importCallCss(event)" />
       </div>
       <textarea id="call-css-input" placeholder="/* 套用到通話整個畫面 */" rows="5"
@@ -787,6 +804,7 @@ select.settings-input { cursor: pointer; }
       <div style="display:flex;gap:6px;margin-bottom:6px;">
         <button class="settings-btn" style="margin:0;flex:1;" onclick="exportBubbleCss()">匯出</button>
         <button class="settings-btn" style="margin:0;flex:1;" onclick="document.getElementById('bubble-css-import').click()">匯入</button>
+        <button class="settings-btn danger" style="margin:0;flex:1;" onclick="clearBubbleCss()">清除</button>
         <input type="file" id="bubble-css-import" accept=".css,.txt" style="display:none" onchange="importBubbleCss(event)" />
       </div>
       <textarea id="bubble-css-input" placeholder="/* 對話框樣式，例：\n.bubble.them { background: rgba(255,255,255,.15); backdrop-filter: blur(8px); } */" rows="5"
@@ -1215,11 +1233,91 @@ function updateClock() {
   const now = new Date();
   const hh = String(now.getHours()).padStart(2,'0');
   const mm = String(now.getMinutes()).padStart(2,'0');
-  const t = `${hh}:${mm}`;
-  // 時間只顯示在鎖定畫面（status-bar 已移除）
-  document.getElementById('lock-time-display').textContent = t;
-  const days = ['日','一','二','三','四','五','六'];
-  document.getElementById('lock-date-display').textContent = `星期${days[now.getDay()]} ${now.getMonth()+1}月${now.getDate()}日`;
+  document.getElementById('lock-time-display').textContent = `${hh}:${mm}`;
+
+  // 日期：「9月1日週二．丙午年七月二十」
+  const weekDays = ['週日','週一','週二','週三','週四','週五','週六'];
+  const m = now.getMonth() + 1;
+  const d = now.getDate();
+  const w = weekDays[now.getDay()];
+  const lunar = getLunarDate(now);
+  document.getElementById('lock-date-display').textContent =
+    `${m}月${d}日${w}．${lunar}`;
+}
+
+// 農曆計算（簡易版，精確到2060年）
+function getLunarDate(date) {
+  const lunarInfo = [
+    0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
+    0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
+    0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
+    0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
+    0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
+    0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0,
+    0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
+    0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b6a0,0x195a6,
+    0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,
+    0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06aa0,0x0a6b6,0x056a0,0x02b60,0x09570,
+    0x052b2,0x04970,0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,
+    0x1c8d7,0x0c950,0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2
+  ];
+  const heavenly = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  const earthly  = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  const lunarMonths = ['正','二','三','四','五','六','七','八','九','十','冬','臘'];
+  const lunarDays   = ['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十',
+                       '十一','十二','十三','十四','十五','十六','十七','十八','十九','二十',
+                       '廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
+
+  const baseDate = new Date(1900, 0, 31);
+  const offset = Math.floor((date - baseDate) / 86400000);
+  let lunarYear = 1900, lunarMonth = 1, lunarDay = 1;
+  let i, temp = 0, isLeap = false;
+
+  for (i = 1900; i < 2100 && temp < offset; i++) {
+    const daysOfYear = lDays(i);
+    temp += daysOfYear;
+  }
+  if (temp > offset) { i--; temp -= lDays(i); }
+  lunarYear = i;
+
+  let daysOfLeap = leapDays(i);
+  let leapMonth = leapM(i);
+  let remain = offset - temp;
+
+  for (i = 1; i < 13 && remain > 0; i++) {
+    if (leapMonth > 0 && i === leapMonth + 1 && !isLeap) {
+      i--; isLeap = true; temp = daysOfLeap;
+    } else {
+      temp = monthDays(lunarYear, i);
+    }
+    if (isLeap && i === leapMonth + 1) isLeap = false;
+    remain -= temp;
+  }
+  if (remain === 0 && leapMonth > 0 && i === leapMonth + 1) {
+    if (isLeap) { isLeap = false; } else { isLeap = true; i--; }
+  }
+  if (remain < 0) { remain += temp; i--; }
+  lunarMonth = i;
+  lunarDay = remain + 1;
+
+  const cyclicalYear = (lunarYear - 4) % 60;
+  const yearName = heavenly[cyclicalYear % 10] + earthly[cyclicalYear % 12] + '年';
+  const monthName = lunarMonths[lunarMonth - 1] + '月';
+  const dayName = lunarDays[lunarDay - 1];
+
+  return yearName + monthName + dayName;
+
+  function leapM(y) { return lunarInfo[y-1900] & 0xf; }
+  function leapDays(y) {
+    if (leapM(y)) return (lunarInfo[y-1900] & 0x10000) ? 30 : 29;
+    return 0;
+  }
+  function monthDays(y, m) { return (lunarInfo[y-1900] & (0x10000 >> m)) ? 30 : 29; }
+  function lDays(y) {
+    let s = 348;
+    for (let i = 0x8000; i > 0x8; i >>= 1) s += (lunarInfo[y-1900] & i) ? 1 : 0;
+    return s + leapDays(y);
+  }
 }
 
 function updateHomeGreeting() { /* removed */ }
@@ -1679,14 +1777,6 @@ function activateApiProfile(id) {
   if (p) { /* home-call-label removed */ }
 }
 
-function deleteApiProfile(id) {
-  if (state.apiProfiles.length<=1) { alert('至少保留一個設定檔'); return; }
-  if (!confirm('刪除這個設定檔？')) return;
-  state.apiProfiles = state.apiProfiles.filter(p=>p.id!==id);
-  if (state.activeProfileId===id) state.activeProfileId = state.apiProfiles[0].id;
-  saveAll(); renderApiProfiles();
-}
-
 function saveApiProfile() {
   const name = document.getElementById('api-profile-name-input').value.trim()||'未命名';
   const service = document.getElementById('setting-service').value;
@@ -1870,10 +1960,6 @@ function loadImport(e) {
   reader.readAsText(file); e.target.value='';
 }
 
-function clearAll() {
-  if(confirm('確定清除所有資料？')) { localStorage.removeItem('cp2-main'); location.reload(); }
-}
-
 // ============ MY PROFILE ============
 function loadMyProfileUI() {
   const mp=state.myProfile;
@@ -2003,8 +2089,48 @@ function applySavedTheme(id) {
   saveAll(); renderThemeScreen();
 }
 
+function clearGlobalCss() {
+  document.getElementById('global-css-input').value = '';
+  state.themeHome.globalCss = '';
+  document.getElementById('global-custom-style').textContent = '';
+  saveAll();
+}
+
+function clearCallCss() {
+  document.getElementById('call-css-input').value = '';
+  document.getElementById('call-custom-style').textContent = '';
+}
+
+function clearBubbleCss() {
+  document.getElementById('bubble-css-input').value = '';
+  document.getElementById('bubble-custom-style').textContent = '';
+}
+
+// 防呆確認刪除
+function confirmDelete(msg, callback) {
+  // 用客製化 confirm 取代原生 confirm（原生在 PWA 上有時怪怪的）
+  if (confirm(msg)) callback();
+}
+
 function deleteSavedTheme(id) {
-  state.themes=state.themes.filter(t=>t.id!==id); saveAll(); renderSavedThemes();
+  confirmDelete('確定刪除這個主題？', () => {
+    state.themes = state.themes.filter(t => t.id !== id);
+    saveAll(); renderSavedThemes();
+  });
+}
+
+function deleteApiProfile(id) {
+  confirmDelete('確定刪除這個 API 設定檔？', () => {
+    state.apiProfiles = state.apiProfiles.filter(p => p.id !== id);
+    if (state.activeProfileId === id) state.activeProfileId = state.apiProfiles[0]?.id || null;
+    saveAll(); renderApiProfiles();
+  });
+}
+
+function clearAll() {
+  confirmDelete('確定清除所有資料？\n（聯絡人、紀錄、設定都會消失）', () => {
+    localStorage.removeItem('cp2-main'); location.reload();
+  });
 }
 
 function resetTheme() {
@@ -2146,8 +2272,18 @@ function applyGlassBlur(val) {
 }
 
 function applyGlassBlurStyle(val) {
+  val = parseInt(val) || 0;
   const css = val > 0
-    ? `#screen-home { backdrop-filter: blur(${val}px); -webkit-backdrop-filter: blur(${val}px); background-color: rgba(0,0,0,0.25) !important; }`
+    ? `.app-icon-box {
+        backdrop-filter: blur(${val}px) !important;
+        -webkit-backdrop-filter: blur(${val}px) !important;
+        background: rgba(255,255,255,${Math.min(0.15 + val*0.01, 0.35)}) !important;
+        border-color: rgba(255,255,255,0.3) !important;
+      }
+      .home-dock {
+        backdrop-filter: blur(${val}px) !important;
+        -webkit-backdrop-filter: blur(${val}px) !important;
+      }`
     : '';
   document.getElementById('home-custom-style').textContent = css;
 }
