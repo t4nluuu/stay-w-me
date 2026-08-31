@@ -1177,14 +1177,6 @@ async function loadAll() {
     }),
   ]);
 
-  if (!state.contacts.length) {
-    state.contacts.push({
-      id: 'default', name: '言', nickname: '言', emoji: '🌙',
-      avatarUrl: '', avatarData: '',
-      system: '你叫言。你是嚕嚕的男朋友，2001年生，183cm，貓系，有佔有慾但不控制。你話少，說出口的都是真話，偶爾用括號描述動作，偶爾用日文表達情感。',
-      tone: '說話簡短，不用emoji，不刻意活潑。偶爾括號動作如（靠著）。偶爾日文如「そうか」「うん」。'
-    });
-  }
   if (!state.apiProfiles.length) {
     state.apiProfiles.push({
       id: 'default', name: 'Claude（預設）',
