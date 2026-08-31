@@ -770,6 +770,14 @@ select.settings-input { cursor: pointer; }
           <span id="glass-shadow-val" style="font-size:12px;color:var(--color-text-dim);min-width:24px;text-align:right;">0</span>
         </div>
       </div>
+      <div class="theme-var-row" style="padding:14px 0;border-bottom:1px solid var(--color-border);">
+        <div class="theme-var-label">光感強度<div class="theme-var-sub">左上光源 · 內發光 · 不對稱邊框</div></div>
+        <div class="theme-var-right">
+          <input type="range" id="glass-light-slider" min="0" max="100" value="0"
+            style="width:90px;" oninput="applyGlassEffect()" />
+          <span id="glass-light-val" style="font-size:12px;color:var(--color-text-dim);min-width:24px;text-align:right;">0</span>
+        </div>
+      </div>
 
       <!-- 自訂 CSS -->
       <div class="settings-section-title" style="margin-top:16px;">自訂 CSS</div>
@@ -955,7 +963,7 @@ let state = {
   themes: [],
   activeThemeVars: {},
   appLayout: null,
-  themeHome: { bgUrl:'', bgData:'', lockBgUrl:'', lockBgData:'', css:'', globalCss:'', glassBlur:0, glassOpacity:100, glassShadow:0 },
+  themeHome: { bgUrl:'', bgData:'', lockBgUrl:'', lockBgData:'', css:'', globalCss:'', glassBlur:0, glassOpacity:100, glassShadow:0, glassLight:0 },
   themeCall: {},  // keyed by contact id: { bgUrl, bgData, css, bubbleCss }
   themeCallContactId: null,
   contact: null,
@@ -1001,7 +1009,7 @@ function loadAll() {
     state.themes = d.themes || [];
     state.activeThemeVars = d.activeThemeVars || {};
     state.appLayout = d.appLayout || null;
-    state.themeHome = { bgUrl:'', bgData:'', lockBgUrl:'', lockBgData:'', css:'', globalCss:'', glassBlur:0, glassOpacity:100, glassShadow:0, ...(d.themeHome||{}) };
+    state.themeHome = { bgUrl:'', bgData:'', lockBgUrl:'', lockBgData:'', css:'', globalCss:'', glassBlur:0, glassOpacity:100, glassShadow:0, glassLight:0, ...(d.themeHome||{}) };
     state.themeCall = d.themeCall || {};
   }
   if (!state.contacts.length) {
@@ -2231,6 +2239,11 @@ function loadThemeHomeUI() {
     shSlider.value = th.glassShadow || 0;
     document.getElementById('glass-shadow-val').textContent = th.glassShadow || 0;
   }
+  const ltSlider = document.getElementById('glass-light-slider');
+  if (ltSlider) {
+    ltSlider.value = th.glassLight || 0;
+    document.getElementById('glass-light-val').textContent = th.glassLight || 0;
+  }
   // 顯示持久狀態——重開後也知道有沒有設定背景
   const hasHomeBg = !!(th.bgUrl || th.bgData);
   const hasLockBg = !!(th.lockBgUrl || th.lockBgData);
@@ -2349,54 +2362,82 @@ function handleLockBgFile(e) {
 
 // 毛玻璃拉桿
 function applyGlassEffect() {
-  const blurEl   = document.getElementById('glass-blur-slider');
-  const opEl     = document.getElementById('glass-opacity-slider');
-  const shEl     = document.getElementById('glass-shadow-slider');
-  const blur    = parseInt(blurEl?.value)   || 0;
-  const opacity = parseInt(opEl?.value)     ?? 100;
-  const shadow  = parseInt(shEl?.value)     || 0;
+  const blurEl = document.getElementById('glass-blur-slider');
+  const opEl   = document.getElementById('glass-opacity-slider');
+  const shEl   = document.getElementById('glass-shadow-slider');
+  const ltEl   = document.getElementById('glass-light-slider');
+  const blur   = parseInt(blurEl?.value) || 0;
+  const opacity= parseInt(opEl?.value)  ?? 100;
+  const shadow = parseInt(shEl?.value)  || 0;
+  const light  = parseInt(ltEl?.value)  || 0;
 
-  if (blurEl)  document.getElementById('glass-blur-val').textContent    = blur;
-  if (opEl)    document.getElementById('glass-opacity-val').textContent  = opacity;
-  if (shEl)    document.getElementById('glass-shadow-val').textContent   = shadow;
+  if (blurEl) document.getElementById('glass-blur-val').textContent    = blur;
+  if (opEl)   document.getElementById('glass-opacity-val').textContent = opacity;
+  if (shEl)   document.getElementById('glass-shadow-val').textContent  = shadow;
+  if (ltEl)   document.getElementById('glass-light-val').textContent   = light;
 
   state.themeHome.glassBlur    = blur;
   state.themeHome.glassOpacity = opacity;
   state.themeHome.glassShadow  = shadow;
-  applyGlassStyle(blur, opacity, shadow);
+  state.themeHome.glassLight   = light;
+  applyGlassStyle(blur, opacity, shadow, light);
   saveAll();
 }
 
-// 舊名稱 shim（applyAllCustomThemes 會呼叫）
 function applyGlassBlur(val) { applyGlassEffect(); }
 
-function applyGlassStyle(blur, opacity, shadow) {
+function applyGlassStyle(blur, opacity, shadow, light) {
   const op = (opacity ?? 100) / 100;
-  // 白色底用 rgba(255,255,255,op)，若主題是深色自動偵測換成黑色底
+  const lt = (light   || 0)   / 100;
+
   const bgColor = getComputedStyle(document.documentElement)
     .getPropertyValue('--color-bg').trim();
-  // 判斷亮/暗：取 bg hex 轉 luminance
   const isDark = isColorDark(bgColor);
+
   const glassBase = isDark
     ? `rgba(0,0,0,${Math.max(0, op - 0.3).toFixed(2)})`
     : `rgba(255,255,255,${op.toFixed(2)})`;
-  const shadowStr = shadow > 0
-    ? `0 ${shadow/2}px ${shadow}px rgba(0,0,0,${(shadow/80).toFixed(2)})`
-    : 'none';
+  const glassDock = isDark
+    ? `rgba(0,0,0,${Math.max(0, op - 0.5).toFixed(2)})`
+    : `rgba(255,255,255,${Math.max(0, op - 0.3).toFixed(2)})`;
 
-  const css = (blur > 0 || opacity < 100 || shadow > 0)
+  // 外陰影
+  const outerShadow = shadow > 0
+    ? `0 ${Math.round(shadow/2)}px ${shadow}px rgba(0,0,0,${(shadow/80).toFixed(2)})`
+    : '';
+
+  // 內發光：左上亮右下暗，模擬光從左上打入
+  const insetLight = lt > 0
+    ? `inset ${Math.round(lt*2)}px ${Math.round(lt*2)}px ${Math.round(lt*8)}px rgba(255,255,255,${(lt*0.7).toFixed(2)}), inset -1px -1px ${Math.round(lt*4)}px rgba(0,0,0,${(lt*0.15).toFixed(2)})`
+    : '';
+
+  const boxShadow = [outerShadow, insetLight].filter(Boolean).join(', ') || 'none';
+
+  // 不對稱邊框：左上亮、右下暗
+  const topLeftA  = (lt * 0.9).toFixed(2);
+  const botRightA = (lt * 0.08).toFixed(2);
+  const borderTop    = lt > 0 ? `1.5px solid rgba(255,255,255,${topLeftA})` : `1px solid rgba(255,255,255,0.2)`;
+  const borderLeft   = lt > 0 ? `1.5px solid rgba(255,255,255,${topLeftA})` : `1px solid rgba(255,255,255,0.2)`;
+  const borderBottom = lt > 0 ? `1px solid rgba(255,255,255,${botRightA})`  : `1px solid rgba(255,255,255,0.2)`;
+  const borderRight  = lt > 0 ? `1px solid rgba(255,255,255,${botRightA})`  : `1px solid rgba(255,255,255,0.2)`;
+
+  const css = (blur > 0 || opacity < 100 || shadow > 0 || light > 0)
     ? `.app-icon-box {
         backdrop-filter: blur(${blur}px) !important;
         -webkit-backdrop-filter: blur(${blur}px) !important;
         background: ${glassBase} !important;
-        border-color: rgba(255,255,255,0.25) !important;
-        box-shadow: ${shadowStr} !important;
+        box-shadow: ${boxShadow} !important;
+        border-top:    ${borderTop} !important;
+        border-left:   ${borderLeft} !important;
+        border-bottom: ${borderBottom} !important;
+        border-right:  ${borderRight} !important;
       }
       .home-dock {
         backdrop-filter: blur(${blur}px) !important;
         -webkit-backdrop-filter: blur(${blur}px) !important;
-        background: ${isDark ? `rgba(0,0,0,${Math.max(0,op-0.5).toFixed(2)})` : `rgba(255,255,255,${Math.max(0,op-0.3).toFixed(2)})`} !important;
-        box-shadow: ${shadowStr} !important;
+        background: ${glassDock} !important;
+        box-shadow: ${outerShadow || 'none'} !important;
+        border: 1px solid rgba(255,255,255,${topLeftA}) !important;
       }`
     : '';
   document.getElementById('home-custom-style').textContent = css;
@@ -2411,10 +2452,9 @@ function isColorDark(hex) {
   return (r*299 + g*587 + b*114) / 1000 < 128;
 }
 
-// applyGlassBlurStyle shim（applyThemeHome 呼叫）
 function applyGlassBlurStyle(val) {
   const th = state.themeHome;
-  applyGlassStyle(th.glassBlur||0, th.glassOpacity??100, th.glassShadow||0);
+  applyGlassStyle(th.glassBlur||0, th.glassOpacity??100, th.glassShadow||0, th.glassLight||0);
 }
 
 // 全局 CSS
@@ -2466,7 +2506,7 @@ function renderThemeCallInline() {
 // stub for old saveThemeHome references
 function saveThemeHome() { saveAll(); applyThemeHome(); }
 function resetThemeHome() {
-  state.themeHome = { bgUrl:'', bgData:'', lockBgUrl:'', lockBgData:'', css:'', globalCss:'', glassBlur:0, glassOpacity:100, glassShadow:0 };
+  state.themeHome = { bgUrl:'', bgData:'', lockBgUrl:'', lockBgData:'', css:'', globalCss:'', glassBlur:0, glassOpacity:100, glassShadow:0, glassLight:0 };
   saveAll(); applyThemeHome(); applyLockBg(); loadThemeHomeUI();
 }
 
@@ -2625,6 +2665,8 @@ function applyAllCustomThemes() {
   if (op) { op.value = th.glassOpacity??100; document.getElementById('glass-opacity-val').textContent = th.glassOpacity??100; }
   const sh = document.getElementById('glass-shadow-slider');
   if (sh) { sh.value = th.glassShadow||0; document.getElementById('glass-shadow-val').textContent = th.glassShadow||0; }
+  const lt = document.getElementById('glass-light-slider');
+  if (lt) { lt.value = th.glassLight||0; document.getElementById('glass-light-val').textContent = th.glassLight||0; }
   const active = state.contact;
   if (active) applyCallThemeForContact(active.id);
 }
