@@ -201,8 +201,8 @@ input, textarea, [contenteditable] {
   overflow: hidden;
 }
 .incoming-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
-.incoming-name { font-size: 32px; font-weight: 600; color: var(--color-text); text-align: center; }
-.incoming-status { font-size: 16px; color: var(--color-text-dim); text-align: center; margin-top: 6px; }
+.incoming-name { font-size: 32px; font-weight: 600; color: #ffffff; text-align: center; }
+.incoming-status { font-size: 16px; color: rgba(255,255,255,0.7); text-align: center; margin-top: 6px; }
 .incoming-actions { display: flex; justify-content: space-around; width: 100%; align-items: center; }
 .call-action-btn { display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; }
 .call-action-btn .btn-circle {
@@ -213,7 +213,7 @@ input, textarea, [contenteditable] {
 .call-action-btn:active .btn-circle { transform: scale(.94); }
 .btn-reject { background: var(--color-danger); }
 .btn-accept { background: var(--color-green); }
-.call-action-label { font-size: 13px; color: var(--color-text-dim); }
+.call-action-label { font-size: 13px; color: rgba(255,255,255,0.7); }
 
 /* ---- OUTGOING ---- */
 #screen-outgoing {
@@ -230,8 +230,8 @@ input, textarea, [contenteditable] {
 }
 .outgoing-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
 @keyframes pulse { 0%,100%{box-shadow:0 0 40px rgba(123,110,246,.3)} 50%{box-shadow:0 0 60px rgba(123,110,246,.5)} }
-.outgoing-name { font-size: 32px; font-weight: 600; color: var(--color-text); text-align: center; }
-.outgoing-status { font-size: 16px; color: var(--color-text-dim); text-align: center; margin-top: 6px; }
+.outgoing-name { font-size: 32px; font-weight: 600; color: #ffffff; text-align: center; }
+.outgoing-status { font-size: 16px; color: rgba(255,255,255,0.7); text-align: center; margin-top: 6px; }
 .outgoing-cancel-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .outgoing-cancel-wrap .btn-circle { width: 72px; height: 72px; border-radius: 50%; background: var(--color-danger); display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; }
 
@@ -2684,6 +2684,64 @@ function applyGlassStyle(blur, opacity, shadow, light) {
         background: ${glassDock} !important;
         box-shadow: ${outerShadow || 'none'} !important;
         border: 1px solid rgba(255,255,255,${topLeftA}) !important;
+      }
+      /* 通話頁文字固定白色（通話背景永遠是深色） */
+      #screen-call .call-contact-name,
+      #screen-call .call-timer,
+      #screen-call .call-btn-label,
+      #screen-call .chat-input { color: #ffffff !important; }
+      #screen-call .bubble.them { color: #f0f0f8 !important; }
+      /* 通話頁六顆按鈕套玻璃 */
+      .call-btn .btn-circle {
+        backdrop-filter: blur(${blur}px) !important;
+        -webkit-backdrop-filter: blur(${blur}px) !important;
+        background: rgba(255,255,255,${Math.min(op * 0.18, 0.3).toFixed(2)}) !important;
+        box-shadow: ${boxShadow} !important;
+        border-top:    ${borderTop} !important;
+        border-left:   ${borderLeft} !important;
+        border-bottom: ${borderBottom} !important;
+        border-right:  ${borderRight} !important;
+      }
+      /* Spotify 保綠、結束保紅，只加玻璃感不改底色 */
+      .call-btn.spotify-btn .btn-circle {
+        background: rgba(29,185,84,${Math.min(op * 0.7, 0.85).toFixed(2)}) !important;
+        border-color: rgba(29,185,84,0.6) !important;
+      }
+      .call-btn.end-btn .btn-circle {
+        background: rgba(224,85,85,${Math.min(op * 0.7, 0.85).toFixed(2)}) !important;
+        border-color: rgba(224,85,85,0.4) !important;
+      }
+      /* 撥打頁取消鈕套玻璃（保紅） */
+      .outgoing-cancel-wrap .btn-circle {
+        backdrop-filter: blur(${blur}px) !important;
+        -webkit-backdrop-filter: blur(${blur}px) !important;
+        background: rgba(224,85,85,${Math.min(op * 0.7, 0.85).toFixed(2)}) !important;
+        box-shadow: ${boxShadow} !important;
+        border-top:    ${borderTop} !important;
+        border-left:   ${borderLeft} !important;
+        border-bottom: ${borderBottom} !important;
+        border-right:  ${borderRight} !important;
+      }
+      /* 來電頁接聽/拒絕鈕套玻璃（保綠/保紅） */
+      .btn-reject {
+        backdrop-filter: blur(${blur}px) !important;
+        -webkit-backdrop-filter: blur(${blur}px) !important;
+        background: rgba(224,85,85,${Math.min(op * 0.7, 0.85).toFixed(2)}) !important;
+        box-shadow: ${boxShadow} !important;
+        border-top:    ${borderTop} !important;
+        border-left:   ${borderLeft} !important;
+        border-bottom: ${borderBottom} !important;
+        border-right:  ${borderRight} !important;
+      }
+      .btn-accept {
+        backdrop-filter: blur(${blur}px) !important;
+        -webkit-backdrop-filter: blur(${blur}px) !important;
+        background: rgba(76,175,125,${Math.min(op * 0.7, 0.85).toFixed(2)}) !important;
+        box-shadow: ${boxShadow} !important;
+        border-top:    ${borderTop} !important;
+        border-left:   ${borderLeft} !important;
+        border-bottom: ${borderBottom} !important;
+        border-right:  ${borderRight} !important;
       }`
     : '';
   document.getElementById('home-custom-style').textContent = css;
@@ -2705,8 +2763,12 @@ function updateGlassPreview(blur, op, outerShadow, boxShadow, borderTop, borderL
   const dock  = document.querySelector('.glass-preview-dock');
   if (!icons.length) return;
 
-  // 統一用傳入的 op 值，預覽背景固定有漸層，所以 backdrop 有東西可以作用
-  const bg = `rgba(255,255,255,${op.toFixed(2)})`;
+  // 跟著主題深淺走，不固定白色
+  const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim();
+  const isDark  = isColorDark(bgColor);
+  const bg = isDark
+    ? `rgba(0,0,0,${op.toFixed(2)})`
+    : `rgba(255,255,255,${op.toFixed(2)})`;
   const filterVal = blur > 0 ? `blur(${blur}px)` : 'none';
 
   icons.forEach(icon => {
@@ -2720,7 +2782,9 @@ function updateGlassPreview(blur, op, outerShadow, boxShadow, borderTop, borderL
     icon.style.borderRight          = borderRight;
   });
   if (dock) {
-    dock.style.background           = glassDock;
+    dock.style.background           = isDark
+      ? `rgba(0,0,0,${op.toFixed(2)})`
+      : `rgba(255,255,255,${op.toFixed(2)})`;
     dock.style.backdropFilter       = filterVal;
     dock.style.webkitBackdropFilter = filterVal;
     dock.style.boxShadow            = outerShadow || '';
