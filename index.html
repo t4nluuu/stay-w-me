@@ -71,17 +71,20 @@ body {
   overflow: hidden; position: absolute; inset: 0;
   transition: transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
 }
-.lock-time { text-align: center; color: var(--color-text); padding: 0 24px; }
+.lock-time {
+  text-align: center; color: var(--color-text); padding: 0 24px;
+  margin-top: 40px; /* 整體下移 */
+}
 .lock-time .date-label {
-  font-size: 17px; font-weight: 400;
+  font-size: 20px; font-weight: 400;
   color: var(--color-text);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   letter-spacing: .1px;
 }
 .lock-time .hour {
-  font-size: clamp(80px, 22vw, 96px);
+  font-size: clamp(96px, 26vw, 116px);
   font-weight: 700;
-  letter-spacing: -3px;
+  letter-spacing: -4px;
   line-height: 1;
   color: var(--color-text);
 }
@@ -374,6 +377,13 @@ select.settings-input { cursor: pointer; }
 .theme-bg-icon { font-size: 22px; }
 .theme-bg-label { font-size: 13px; color: var(--color-text); font-weight: 600; }
 .theme-bg-panel { background: var(--color-surface-2); border-radius: var(--radius-card); padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--color-border); }
+.theme-bg-status { font-size: 12px; color: var(--color-green); min-height: 18px; margin-bottom: 2px; font-weight: 500; }
+/* 選中狀態的背景按鈕 */
+.theme-bg-btn.active {
+  background: var(--color-surface-2);
+  border-color: var(--color-accent);
+}
+.theme-bg-btn.active .theme-bg-label { color: var(--color-accent); }
 
 /* ---- MY PROFILE SCREEN ---- */
 #screen-myprofile { background: var(--color-bg); }
@@ -695,21 +705,23 @@ select.settings-input { cursor: pointer; }
       </div>
       <!-- 鎖定螢幕背景 panel -->
       <div id="theme-bg-lock-panel" class="theme-bg-panel" style="display:none;">
-        <div style="display:flex;gap:8px;padding:8px 0;">
+        <div id="lock-bg-status" class="theme-bg-status"></div>
+        <div style="display:flex;gap:8px;padding:4px 0 8px;">
           <input class="settings-input" id="lock-bg-url" type="text" placeholder="https://…" style="flex:1;" oninput="previewLockBg()" />
           <button class="settings-btn" style="margin:0;padding:8px 10px;width:auto;" onclick="document.getElementById('lock-bg-file').click()">上傳</button>
           <input type="file" id="lock-bg-file" accept="image/*" style="display:none" onchange="handleLockBgFile(event)" />
         </div>
-        <button class="settings-btn danger" style="margin-top:4px;" onclick="clearLockBg()">清除背景</button>
+        <button class="settings-btn danger" style="margin-top:4px;" onclick="clearLockBg()">清除鎖定螢幕背景</button>
       </div>
       <!-- 桌面背景 panel -->
       <div id="theme-bg-home-panel" class="theme-bg-panel" style="display:none;">
-        <div style="display:flex;gap:8px;padding:8px 0;">
+        <div id="home-bg-status" class="theme-bg-status"></div>
+        <div style="display:flex;gap:8px;padding:4px 0 8px;">
           <input class="settings-input" id="home-bg-url" type="text" placeholder="https://…" style="flex:1;" oninput="previewHomeBg()" />
           <button class="settings-btn" style="margin:0;padding:8px 10px;width:auto;" onclick="document.getElementById('home-bg-file').click()">上傳</button>
           <input type="file" id="home-bg-file" accept="image/*" style="display:none" onchange="handleHomeBgFile(event)" />
         </div>
-        <button class="settings-btn danger" style="margin-top:4px;" onclick="clearHomeBg()">清除背景</button>
+        <button class="settings-btn danger" style="margin-top:4px;" onclick="clearHomeBg()">清除桌面背景</button>
       </div>
 
       <!-- 全局預設主題 -->
@@ -821,8 +833,7 @@ select.settings-input { cursor: pointer; }
       </div>
 
       <div style="display:flex;gap:8px;margin-top:16px;">
-        <button class="settings-btn" style="flex:1;margin:0;" onclick="saveThemeCall()">儲存</button>
-        <button class="settings-btn danger" style="flex:1;margin:0;" onclick="resetThemeCall()">重置</button>
+        <button class="settings-btn accent" style="flex:1;margin:0;" onclick="saveThemeCall()">儲存</button>
       </div>
     </div>
   </div>
@@ -2023,20 +2034,25 @@ function renderThemeScreen() {
     pg.appendChild(div);
   });
 
-  // color vars
+  // color vars — iOS 相容版（input[type=color] 直接可見可點）
   const vl=document.getElementById('theme-var-list'); vl.innerHTML='';
   THEME_VARS.forEach((v,i) => {
     const cur = getComputedStyle(document.documentElement).getPropertyValue(v.var).trim();
-    const inputId = `color-picker-${i}`;
-    const swatchId = `color-swatch-${i}`;
-    const row=document.createElement('div'); row.className='theme-var-row';
-    row.innerHTML=`<div class="theme-var-label">${v.label}<div class="theme-var-sub">${v.var}</div></div><div class="theme-var-right"><div class="color-swatch" id="${swatchId}" style="background:${cur}"></div><input type="color" id="${inputId}" class="color-input-hidden" value="${/^#[0-9a-fA-F]{6}$/.test(cur)?cur:'#000000'}" /></div>`;
+    const hexVal = /^#[0-9a-fA-F]{6}$/.test(cur) ? cur : '#000000';
+    const inputId = `cpick-${i}`;
+    const row = document.createElement('div'); row.className = 'theme-var-row';
+    row.innerHTML = `
+      <div class="theme-var-label">${v.label}<div class="theme-var-sub">${v.var}</div></div>
+      <div class="theme-var-right">
+        <label for="${inputId}" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <span class="color-swatch" id="swatch-${i}" style="background:${cur};display:inline-block;"></span>
+          <input type="color" id="${inputId}" value="${hexVal}"
+            style="width:36px;height:36px;border:none;background:none;cursor:pointer;padding:0;border-radius:6px;overflow:hidden;" />
+        </label>
+      </div>`;
     vl.appendChild(row);
-    // bind after append so elements exist
-    const swatch = row.querySelector(`#${swatchId}`);
-    const input  = row.querySelector(`#${inputId}`);
-    swatch.addEventListener('click', () => input.click());
-    swatch.addEventListener('touchend', (e) => { e.preventDefault(); input.click(); });
+    const input = row.querySelector(`#${inputId}`);
+    const swatch = row.querySelector(`#swatch-${i}`);
     input.addEventListener('input', () => {
       updateVar(v.var, input.value);
       swatch.style.background = input.value;
@@ -2182,13 +2198,29 @@ function loadThemeHomeUI() {
 function showThemeBgPanel(which) {
   const lockP = document.getElementById('theme-bg-lock-panel');
   const homeP = document.getElementById('theme-bg-home-panel');
+  const lockBtn = document.querySelector('.theme-bg-btn:first-child');
+  const homeBtn = document.querySelector('.theme-bg-btn:last-child');
+
   if (which === 'lock') {
-    lockP.style.display = lockP.style.display === 'none' ? 'block' : 'none';
+    const isOpen = lockP.style.display !== 'none';
+    lockP.style.display = isOpen ? 'none' : 'block';
     homeP.style.display = 'none';
+    lockBtn.classList.toggle('active', !isOpen);
+    homeBtn.classList.remove('active');
   } else {
-    homeP.style.display = homeP.style.display === 'none' ? 'block' : 'none';
+    const isOpen = homeP.style.display !== 'none';
+    homeP.style.display = isOpen ? 'none' : 'block';
     lockP.style.display = 'none';
+    homeBtn.classList.toggle('active', !isOpen);
+    lockBtn.classList.remove('active');
   }
+}
+
+function setBgStatus(which, msg, isError) {
+  const el = document.getElementById(which === 'home' ? 'home-bg-status' : 'lock-bg-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--color-danger)' : 'var(--color-green)';
 }
 
 function previewHomeBg() {
@@ -2199,9 +2231,11 @@ function previewHomeBg() {
     el.style.backgroundSize = 'cover';
     el.style.backgroundPosition = 'center';
     state.themeHome.bgUrl = url; state.themeHome.bgData = '';
+    setBgStatus('home', '✓ 已套用桌面背景');
   } else {
     el.style.backgroundImage = '';
     state.themeHome.bgUrl = '';
+    setBgStatus('home', '');
   }
   saveAll();
 }
@@ -2214,9 +2248,11 @@ function previewLockBg() {
     el.style.backgroundSize = 'cover';
     el.style.backgroundPosition = 'center';
     state.themeHome.lockBgUrl = url; state.themeHome.lockBgData = '';
+    setBgStatus('lock', '✓ 已套用鎖定螢幕背景');
   } else {
     el.style.backgroundImage = '';
     state.themeHome.lockBgUrl = '';
+    setBgStatus('lock', '');
   }
   saveAll();
 }
@@ -2225,6 +2261,7 @@ function clearHomeBg() {
   state.themeHome.bgUrl = ''; state.themeHome.bgData = '';
   document.getElementById('home-bg-url').value = '';
   document.getElementById('screen-home').style.backgroundImage = '';
+  setBgStatus('home', '已清除桌面背景');
   saveAll();
 }
 
@@ -2232,6 +2269,7 @@ function clearLockBg() {
   state.themeHome.lockBgUrl = ''; state.themeHome.lockBgData = '';
   document.getElementById('lock-bg-url').value = '';
   document.getElementById('screen-lock').style.backgroundImage = '';
+  setBgStatus('lock', '已清除鎖定螢幕背景');
   saveAll();
 }
 
@@ -2244,6 +2282,7 @@ function handleHomeBgFile(e) {
     const el = document.getElementById('screen-home');
     el.style.backgroundImage = `url('${ev.target.result}')`;
     el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center';
+    setBgStatus('home', `✓ 已上傳桌面背景（${file.name}）`);
     saveAll();
   };
   r.readAsDataURL(file); e.target.value = '';
@@ -2258,6 +2297,7 @@ function handleLockBgFile(e) {
     const el = document.getElementById('screen-lock');
     el.style.backgroundImage = `url('${ev.target.result}')`;
     el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center';
+    setBgStatus('lock', `✓ 已上傳鎖定螢幕背景（${file.name}）`);
     saveAll();
   };
   r.readAsDataURL(file); e.target.value = '';
