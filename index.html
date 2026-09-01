@@ -2777,16 +2777,24 @@ function applyGlassStyle(blur, opacity, shadow, light) {
   const op = (opacity ?? 100) / 100;
   const lt = (light   || 0)   / 100;
 
-  const bgColor = getComputedStyle(document.documentElement)
-    .getPropertyValue('--color-bg').trim();
+  const bgColor      = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim();
+  const surfaceColor = getComputedStyle(document.documentElement).getPropertyValue('--color-surface-2').trim();
   const isDark = isColorDark(bgColor);
 
-  const glassBase = isDark
-    ? `rgba(0,0,0,${Math.max(0, op - 0.3).toFixed(2)})`
-    : `rgba(255,255,255,${op.toFixed(2)})`;
-  const glassDock = isDark
-    ? `rgba(0,0,0,${Math.max(0, op - 0.3).toFixed(2)})`
-    : `rgba(255,255,255,${op.toFixed(2)})`;
+  // 用主題的 surface-2 顏色 + 透明度，不寫死黑或白
+  function hexToRgba(hex, alpha) {
+    hex = hex.replace('#','');
+    if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+    const r = parseInt(hex.slice(0,2),16);
+    const g = parseInt(hex.slice(2,4),16);
+    const b = parseInt(hex.slice(4,6),16);
+    return `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+  }
+
+  const glassBase = /^#[0-9a-fA-F]{3,6}$/.test(surfaceColor)
+    ? hexToRgba(surfaceColor, op)
+    : isDark ? `rgba(0,0,0,${op.toFixed(2)})` : `rgba(255,255,255,${op.toFixed(2)})`;
+  const glassDock = glassBase;
 
   // 外陰影
   const outerShadow = shadow > 0
@@ -2907,12 +2915,23 @@ function updateGlassPreview(blur, op, outerShadow, boxShadow, borderTop, borderL
   const dock  = document.querySelector('.glass-preview-dock');
   if (!icons.length) return;
 
-  // 跟著主題深淺走，不固定白色
-  const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim();
-  const isDark  = isColorDark(bgColor);
-  const bg = isDark
-    ? `rgba(0,0,0,${op.toFixed(2)})`
-    : `rgba(255,255,255,${op.toFixed(2)})`;
+  // 跟著主題 surface-2 顏色走
+  const bgColor      = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim();
+  const surfaceColor = getComputedStyle(document.documentElement).getPropertyValue('--color-surface-2').trim();
+  const isDark = isColorDark(bgColor);
+
+  function hexToRgbaP(hex, alpha) {
+    hex = hex.replace('#','');
+    if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+    const r = parseInt(hex.slice(0,2),16);
+    const g = parseInt(hex.slice(2,4),16);
+    const b = parseInt(hex.slice(4,6),16);
+    return `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+  }
+
+  const bg = /^#[0-9a-fA-F]{3,6}$/.test(surfaceColor)
+    ? hexToRgbaP(surfaceColor, op)
+    : isDark ? `rgba(0,0,0,${op.toFixed(2)})` : `rgba(255,255,255,${op.toFixed(2)})`;
   const filterVal = blur > 0 ? `blur(${blur}px)` : 'none';
 
   icons.forEach(icon => {
@@ -2926,9 +2945,7 @@ function updateGlassPreview(blur, op, outerShadow, boxShadow, borderTop, borderL
     icon.style.borderRight          = borderRight;
   });
   if (dock) {
-    dock.style.background           = isDark
-      ? `rgba(0,0,0,${op.toFixed(2)})`
-      : `rgba(255,255,255,${op.toFixed(2)})`;
+    dock.style.background           = bg;
     dock.style.backdropFilter       = filterVal;
     dock.style.webkitBackdropFilter = filterVal;
     dock.style.boxShadow            = outerShadow || '';
