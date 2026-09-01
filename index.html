@@ -2463,9 +2463,9 @@ function buildBackupData() {
   return {
     contacts: state.contacts,
     callLog: state.callLog,
-    apiProfiles: state.apiProfiles, // 包含 API key
+    apiProfiles: state.apiProfiles.map(p => ({...p, apiKey: ''})),
     activeProfileId: state.activeProfileId,
-    settings: state.settings, // 包含 cloud token
+    settings: { ...state.settings, cloudToken: '', spotify_token: '' },
     myProfile: state.myProfile,
     themes: state.themes,
     activeThemeVars: state.activeThemeVars,
