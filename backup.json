@@ -1,0 +1,61 @@
+{
+  "contacts": [],
+  "callLog": [],
+  "apiProfiles": [
+    {
+      "id": "default",
+      "name": "Claude（預設）",
+      "service": "claude",
+      "baseUrl": "",
+      "apiKey": "",
+      "model": "claude-sonnet-4-6"
+    }
+  ],
+  "activeProfileId": "default",
+  "settings": {
+    "autocall": false,
+    "spotify_token": "",
+    "cloudToken": "",
+    "cloudOwner": "t4nluuu",
+    "cloudRepo": "stay-w-me"
+  },
+  "myProfile": {
+    "name": "",
+    "info": "",
+    "avatarUrl": "",
+    "avatarData": ""
+  },
+  "themes": [],
+  "activeThemeVars": {
+    "--color-bg": "#f5ede3",
+    "--color-surface": "#fffaf5",
+    "--color-surface-2": "#f0e6d8",
+    "--color-border": "#ddd0c0",
+    "--color-accent": "#b07850",
+    "--color-accent-dim": "#d4a97a",
+    "--color-text": "#3a2a1e",
+    "--color-text-dim": "#7a6050",
+    "--color-text-muted": "#a89080",
+    "--color-danger": "#c85555",
+    "--color-green": "#5a9a5a",
+    "--radius-btn": "50%",
+    "--radius-card": "12px",
+    "--radius-bubble": "16px",
+    "--radius-input": "20px",
+    "--radius-phone": "40px"
+  },
+  "themeHome": {
+    "bgUrl": "",
+    "bgData": "",
+    "lockBgUrl": "",
+    "lockBgData": "",
+    "css": "",
+    "globalCss": "",
+    "glassBlur": 19,
+    "glassOpacity": 36,
+    "glassShadow": 10,
+    "glassLight": 47
+  },
+  "themeCall": {},
+  "backedUpAt": "2026-09-01T09:28:27.001Z"
+}
