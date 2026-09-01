@@ -553,7 +553,7 @@ select.settings-input { cursor: pointer; }
       <div style="position:relative;display:inline-block;">
         <div class="call-contact-name" id="call-contact-name">言</div>
         <div id="done-speaking-btn" onclick="doneSpeaking()" title="我說完了"
-          style="position:absolute;left:calc(100% + 6px);top:50%;transform:translateY(-50%);font-size:18px;cursor:pointer;opacity:0.75;display:none;user-select:none;white-space:nowrap;">🌀</div>
+          style="position:absolute;left:calc(100% + 6px);top:50%;transform:translateY(-50%);font-size:18px;cursor:pointer;opacity:0.75;user-select:none;white-space:nowrap;">🌀</div>
       </div>
       <div class="call-timer" id="call-timer">00:00</div>
     </div>
@@ -1853,7 +1853,6 @@ function startCall() {
   state._aiResponding = false;     // AI 回應中
   state._openerDone = false;       // opener 是否已觸發
   document.getElementById('chat-area').innerHTML = '';
-  document.getElementById('done-speaking-btn').style.display = 'none';
   showScreen('screen-call');
   applyCallThemeForContact(c.id);
   startTimer();
@@ -1868,7 +1867,6 @@ function startCall() {
 function triggerOpener() {
   state._openerDone = true;
   state._aiResponding = true;
-  document.getElementById('done-speaking-btn').style.display = 'none';
   sendAIMessage(null, true);
 }
 
@@ -1983,7 +1981,6 @@ function sendMessage() {
   if (state._aiResponding) return;
 
   // 顯示螺旋按鈕，重置30秒
-  document.getElementById('done-speaking-btn').style.display = 'inline';
   clearTimeout(state._waitTimer);
   state._waitTimer = setTimeout(() => {
     doneSpeaking();
@@ -1994,7 +1991,6 @@ function sendMessage() {
 function doneSpeaking() {
   clearTimeout(state._waitTimer);
   state._waitTimer = null;
-  document.getElementById('done-speaking-btn').style.display = 'none';
   if (state._aiResponding || state._pendingUserMessages.length === 0) return;
   state._pendingUserMessages = [];
   state._aiResponding = true;
