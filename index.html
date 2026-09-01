@@ -732,12 +732,46 @@ select.settings-input { cursor: pointer; }
         <button class="settings-btn" onclick="exportSettings()">匯出設定</button>
         <button class="settings-btn" onclick="importSettings()">匯入設定</button>
         <input type="file" id="import-file" accept=".json" style="display:none" onchange="loadImport(event)" />
+        <button class="settings-btn" onclick="showScreen('screen-cloud-backup')">☁️ 雲端備份</button>
       </div>
 
       <div class="settings-section">
         <button class="settings-btn" onclick="saveGeneralSettings()">儲存設定</button>
         <button class="settings-btn danger" onclick="clearAll()">清除所有資料</button>
       </div>
+    </div>
+  </div>
+
+  <!-- CLOUD BACKUP -->
+  <div id="screen-cloud-backup" class="screen">
+    <div class="screen-header">
+      <div class="back-btn" onclick="showScreen('screen-settings')">‹ 返回</div>
+      <div class="screen-title">雲端備份</div>
+    </div>
+    <div class="settings-list">
+      <div class="settings-section-title">GitHub 設定</div>
+      <div style="font-size:12px;color:var(--color-text-dim);margin-bottom:10px;line-height:1.6;">
+        備份會儲存到你的 GitHub repo 裡的 <code>backup.json</code>。<br>
+        需要 Personal Access Token（勾選 repo 權限）。
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">GitHub Token</div>
+        <input class="settings-input" id="cloud-token" type="password" placeholder="ghp_xxxxxxxx" />
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">帳號名稱</div>
+        <input class="settings-input" id="cloud-owner" type="text" placeholder="你的 GitHub 帳號" />
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Repo 名稱</div>
+        <input class="settings-input" id="cloud-repo" type="text" placeholder="stay-w-me" />
+      </div>
+      <button class="settings-btn" onclick="saveCloudConfig()">儲存設定</button>
+
+      <div class="settings-section-title" style="margin-top:20px;">備份操作</div>
+      <div id="cloud-status" style="font-size:13px;color:var(--color-text-dim);min-height:20px;margin-bottom:10px;"></div>
+      <button class="settings-btn accent" onclick="cloudBackup()">☁️ 備份到 GitHub</button>
+      <button class="settings-btn" onclick="cloudRestore()">⬇️ 從 GitHub 還原</button>
     </div>
   </div>
 
@@ -2345,6 +2379,7 @@ function updateLogCount() {
 function loadSettingsUI() {
   document.getElementById('toggle-autocall').classList.toggle('on', !!state.settings.autocall);
   document.getElementById('setting-spotify-token').value = state.settings.spotify_token||'';
+  loadCloudConfigUI();
 }
 
 function saveGeneralSettings() {
@@ -2385,7 +2420,121 @@ function loadImport(e) {
   reader.readAsText(file); e.target.value='';
 }
 
-// ============ MY PROFILE ============
+// ============ CLOUD BACKUP ============
+function saveCloudConfig() {
+  const token = document.getElementById('cloud-token').value.trim();
+  const owner = document.getElementById('cloud-owner').value.trim();
+  const repo  = document.getElementById('cloud-repo').value.trim();
+  if (!token || !owner || !repo) { setCloudStatus('請填寫所有欄位', true); return; }
+  state.settings.cloudToken = token;
+  state.settings.cloudOwner = owner;
+  state.settings.cloudRepo  = repo;
+  saveAll();
+  setCloudStatus('✓ 設定已儲存');
+}
+
+function loadCloudConfigUI() {
+  const s = state.settings;
+  const t = document.getElementById('cloud-token');
+  const o = document.getElementById('cloud-owner');
+  const r = document.getElementById('cloud-repo');
+  if (t) t.value = s.cloudToken || '';
+  if (o) o.value = s.cloudOwner || '';
+  if (r) r.value = s.cloudRepo  || '';
+}
+
+function setCloudStatus(msg, isError) {
+  const el = document.getElementById('cloud-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--color-danger)' : 'var(--color-green)';
+}
+
+function getCloudConfig() {
+  const s = state.settings;
+  if (!s.cloudToken || !s.cloudOwner || !s.cloudRepo) {
+    setCloudStatus('請先填寫 GitHub 設定', true);
+    return null;
+  }
+  return { token: s.cloudToken, owner: s.cloudOwner, repo: s.cloudRepo };
+}
+
+function buildBackupData() {
+  return {
+    contacts: state.contacts,
+    callLog: state.callLog,
+    apiProfiles: state.apiProfiles, // 包含 API key
+    activeProfileId: state.activeProfileId,
+    settings: state.settings, // 包含 cloud token
+    myProfile: state.myProfile,
+    themes: state.themes,
+    activeThemeVars: state.activeThemeVars,
+    themeHome: { ...state.themeHome, bgData: '', lockBgData: '' },
+    themeCall: Object.fromEntries(
+      Object.entries(state.themeCall).map(([id, tc]) => [id, { ...tc, bgData: '' }])
+    ),
+    backedUpAt: new Date().toISOString(),
+  };
+}
+
+async function cloudBackup() {
+  const cfg = getCloudConfig(); if (!cfg) return;
+  setCloudStatus('備份中...');
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(buildBackupData(), null, 2))));
+  const path = 'backup.json';
+  const apiUrl = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`;
+  try {
+    // 先取得舊檔案的 sha（更新需要）
+    let sha = '';
+    try {
+      const r = await fetch(apiUrl, { headers: { Authorization: `token ${cfg.token}`, Accept: 'application/vnd.github+json' } });
+      if (r.ok) { const d = await r.json(); sha = d.sha; }
+    } catch {}
+
+    const body = { message: `備份 ${new Date().toLocaleString('zh-TW')}`, content };
+    if (sha) body.sha = sha;
+    const res = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: { Authorization: `token ${cfg.token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      setCloudStatus(`✓ 備份成功（${new Date().toLocaleString('zh-TW')}）`);
+    } else {
+      const err = await res.json();
+      setCloudStatus(`備份失敗：${err.message}`, true);
+    }
+  } catch (e) {
+    setCloudStatus(`備份失敗：${e.message}`, true);
+  }
+}
+
+async function cloudRestore() {
+  const cfg = getCloudConfig(); if (!cfg) return;
+  setCloudStatus('還原中...');
+  const apiUrl = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/backup.json`;
+  try {
+    const res = await fetch(apiUrl, { headers: { Authorization: `token ${cfg.token}`, Accept: 'application/vnd.github+json' } });
+    if (!res.ok) { setCloudStatus('找不到備份檔案，請先備份一次', true); return; }
+    const d = await res.json();
+    const json = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g,'')))));
+    confirmDelete('確定從 GitHub 還原？\n目前的資料會被覆蓋。', () => {
+      if (json.contacts)        state.contacts = json.contacts;
+      if (json.callLog)         state.callLog = json.callLog;
+      if (json.apiProfiles)     { state.apiProfiles = json.apiProfiles; state.activeProfileId = json.activeProfileId; }
+      if (json.settings)        state.settings = { ...state.settings, ...json.settings };
+      if (json.themes)          state.themes = json.themes;
+      if (json.myProfile)       state.myProfile = { ...state.myProfile, ...json.myProfile };
+      if (json.activeThemeVars) { state.activeThemeVars = json.activeThemeVars; applyThemeVars(state.activeThemeVars); }
+      if (json.themeHome)       state.themeHome = { ...state.themeHome, ...json.themeHome };
+      if (json.themeCall)       state.themeCall = { ...state.themeCall, ...json.themeCall };
+      saveAll(); renderAll();
+      setCloudStatus(`✓ 還原成功（備份時間：${json.backedUpAt ? new Date(json.backedUpAt).toLocaleString('zh-TW') : '不明'}）`);
+    });
+  } catch (e) {
+    setCloudStatus(`還原失敗：${e.message}`, true);
+  }
+}
 function loadMyProfileUI() {
   const mp=state.myProfile;
   document.getElementById('my-name-input').value=mp.name||'';
