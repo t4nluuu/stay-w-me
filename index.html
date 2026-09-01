@@ -541,8 +541,15 @@ select.settings-input { cursor: pointer; }
   </div>
 
   <!-- CALL -->
+  <!-- 通話浮窗 -->
+  <div id="call-pip" style="display:none;position:absolute;width:120px;height:120px;border-radius:24px;background:rgba(10,10,20,0.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.15);box-shadow:0 8px 32px rgba(0,0,0,0.5);z-index:999;bottom:140px;right:20px;overflow:hidden;cursor:pointer;align-items:center;justify-content:center;">
+    <div id="pip-avatar" style="width:80px;height:80px;border-radius:50%;background:var(--color-accent);display:flex;align-items:center;justify-content:center;font-size:34px;overflow:hidden;flex-shrink:0;"></div>
+  </div>
+
   <div id="screen-call" class="screen">
-    <div class="call-header" style="text-align:center;">
+    <div class="call-header" style="text-align:center;position:relative;">
+      <!-- 縮小按鈕 -->
+      <div onclick="minimizeCall()" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:8px;background:rgba(128,128,128,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;" title="縮小">⤢</div>
       <div style="position:relative;display:inline-block;">
         <div class="call-contact-name" id="call-contact-name">言</div>
         <div id="done-speaking-btn" onclick="doneSpeaking()" title="我說完了"
@@ -1871,6 +1878,8 @@ function endCall() {
   state._waitTimer = null;
   state._pendingUserMessages = [];
   state._aiResponding = false;
+  document.getElementById('call-pip').style.display = 'none';
+  document.getElementById('screen-call').style.display = '';
   const dur = Math.floor((new Date() - state.callStart) / 1000);
   logCall('ended', dur);
   showScreen('screen-home');
@@ -2498,7 +2507,80 @@ function loadImport(e) {
   reader.readAsText(file); e.target.value='';
 }
 
-// ============ CLOUD BACKUP ============
+// ============ CALL PIP (浮窗) ============
+function minimizeCall() {
+  const pip = document.getElementById('call-pip');
+  const c = state.contact;
+  // 設定浮窗頭貼
+  const avatarEl = document.getElementById('pip-avatar');
+  if (c.avatarData || c.avatarUrl) {
+    avatarEl.innerHTML = `<img src="${c.avatarData||c.avatarUrl}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:50%;">`;
+  } else {
+    avatarEl.textContent = c.emoji || '👤';
+  }
+  // 隱藏通話頁，顯示浮窗，跳回 home
+  showScreen('screen-home');
+  pip.style.display = 'flex';
+  initPipDrag(pip);
+}
+
+function restoreCall() {
+  document.getElementById('call-pip').style.display = 'none';
+  showScreen('screen-call');
+}
+
+function initPipDrag(pip) {
+  // 移除舊 listener（用 flag 控制）
+  if (pip._pipInitialized) return;
+  pip._pipInitialized = true;
+
+  let isDragging = false;
+  let startX, startY, startLeft, startTop;
+  let dragMoved = false;
+
+  const onStart = (e) => {
+    isDragging = true;
+    dragMoved = false;
+    const touch = e.touches ? e.touches[0] : e;
+    startX = touch.clientX;
+    startY = touch.clientY;
+    const rect = pip.getBoundingClientRect();
+    const phoneRect = document.getElementById('phone').getBoundingClientRect();
+    startLeft = rect.left - phoneRect.left;
+    startTop  = rect.top  - phoneRect.top;
+    pip.style.transition = 'none';
+    e.preventDefault();
+  };
+
+  const onMove = (e) => {
+    if (!isDragging) return;
+    const touch = e.touches ? e.touches[0] : e;
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragMoved = true;
+    const phoneRect = document.getElementById('phone').getBoundingClientRect();
+    const newLeft = Math.max(0, Math.min(startLeft + dx, phoneRect.width  - pip.offsetWidth));
+    const newTop  = Math.max(0, Math.min(startTop  + dy, phoneRect.height - pip.offsetHeight));
+    pip.style.right  = 'auto';
+    pip.style.bottom = 'auto';
+    pip.style.left   = newLeft + 'px';
+    pip.style.top    = newTop  + 'px';
+    e.preventDefault();
+  };
+
+  const onEnd = () => {
+    if (!isDragging) return;
+    isDragging = false;
+    if (!dragMoved) restoreCall();
+  };
+
+  pip.addEventListener('touchstart', onStart, { passive: false });
+  pip.addEventListener('touchmove',  onMove,  { passive: false });
+  pip.addEventListener('touchend',   onEnd);
+  pip.addEventListener('mousedown',  onStart);
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onEnd);
+}
 function saveCloudConfig() {
   const token = document.getElementById('cloud-token').value.trim();
   const owner = document.getElementById('cloud-owner').value.trim();
@@ -2543,14 +2625,12 @@ function buildBackupData() {
     callLog: state.callLog,
     apiProfiles: state.apiProfiles.map(p => ({...p, apiKey: ''})),
     activeProfileId: state.activeProfileId,
-    settings: { ...state.settings, cloudToken: '', spotify_token: '' },
+    settings: { ...state.settings, cloudToken: '', spotify_token: '', spotify_refresh: '' },
     myProfile: state.myProfile,
     themes: state.themes,
     activeThemeVars: state.activeThemeVars,
-    themeHome: { ...state.themeHome, bgData: '', lockBgData: '' },
-    themeCall: Object.fromEntries(
-      Object.entries(state.themeCall).map(([id, tc]) => [id, { ...tc, bgData: '' }])
-    ),
+    themeHome: state.themeHome, // 包含 bgData 和 lockBgData
+    themeCall: state.themeCall, // 包含通話頁背景
     backedUpAt: new Date().toISOString(),
   };
 }
