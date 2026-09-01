@@ -553,12 +553,14 @@ select.settings-input { cursor: pointer; }
     <div class="chat-area" id="chat-area"></div>
     <div class="spotify-panel hidden" id="spotify-panel">
       <div class="spotify-panel-title">♪ Spotify</div>
+      <div id="spotify-panel-nologin" style="font-size:12px;color:var(--color-text-dim);margin-bottom:8px;display:none;">請先在【設定】登入 Spotify</div>
       <div class="spotify-search">
         <input type="text" id="spotify-search-input" placeholder="搜尋歌曲或藝人…" onkeydown="if(event.key==='Enter')searchSpotify()" />
         <button onclick="searchSpotify()">搜尋</button>
       </div>
       <div class="spotify-results" id="spotify-results"></div>
       <div class="spotify-now-playing" id="spotify-now-playing"></div>
+      <button onclick="openSpotify()" style="margin-top:8px;width:100%;background:#1db954;color:white;border:none;border-radius:8px;padding:8px;font-size:13px;cursor:pointer;">開啟 Spotify ↗</button>
     </div>
     <div class="chat-input-area">
       <textarea class="chat-input" id="chat-input" placeholder="說點什麼…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
@@ -706,12 +708,9 @@ select.settings-input { cursor: pointer; }
       <!-- Spotify -->
       <div class="settings-section">
         <div class="settings-section-title">Spotify</div>
-        <div class="settings-item" style="flex-direction:column;align-items:flex-start;">
-          <div class="settings-item-label">Access Token</div>
-          <div class="settings-item-sub" style="margin-bottom:4px;">從 <a href="https://open.spotify.com/get_access_token" target="_blank" style="color:var(--color-accent)">Spotify 取得</a> 或使用 OAuth</div>
-          <input class="settings-input" id="setting-spotify-token" type="password" placeholder="Bearer token" />
-        </div>
-        <button class="settings-btn" onclick="spotifyOAuth()">用 Spotify 帳號登入</button>
+        <div id="spotify-login-status" style="font-size:13px;color:var(--color-text-dim);margin-bottom:10px;">未登入</div>
+        <button class="settings-btn" onclick="spotifyLogin()" style="background:#1db954;color:white;border:none;font-weight:600;">🎵 登入 Spotify 帳號</button>
+        <button class="settings-btn danger" id="spotify-logout-btn" style="display:none;" onclick="spotifyLogout()">登出 Spotify</button>
       </div>
 
       <!-- Autocall -->
@@ -1224,6 +1223,7 @@ async function loadAll() {
 // ============ INIT ============
 async function init() {
   await loadAll();
+  checkSpotifyTokenFromURL();
   updateClock();
   setInterval(updateClock, 1000);
   applyThemeVars(state.activeThemeVars);
@@ -2085,40 +2085,98 @@ function toggleSpotify() {
 }
 
 // ============ SPOTIFY ============
-async function searchSpotify() {
-  const q = document.getElementById('spotify-search-input').value.trim(); if(!q) return;
+// ============ SPOTIFY ============
+const SPOTIFY_LOGIN_URL = 'https://swme-api.vercel.app/api/login';
+
+function spotifyLogin() {
+  window.open(SPOTIFY_LOGIN_URL, '_blank');
+}
+
+function spotifyLogout() {
+  state.settings.spotify_token = '';
+  saveAll();
+  updateSpotifyLoginStatus();
+}
+
+function openSpotify() {
+  window.location.href = 'spotify:';
+  setTimeout(() => window.open('https://open.spotify.com', '_blank'), 1000);
+}
+
+function updateSpotifyLoginStatus() {
   const token = state.settings.spotify_token;
-  if (!token) { alert('請在設定填入 Spotify Access Token'); return; }
+  const statusEl = document.getElementById('spotify-login-status');
+  const logoutBtn = document.getElementById('spotify-logout-btn');
+  if (statusEl) statusEl.textContent = token ? '✓ 已登入' : '未登入';
+  if (statusEl) statusEl.style.color = token ? 'var(--color-green)' : 'var(--color-text-dim)';
+  if (logoutBtn) logoutBtn.style.display = token ? 'block' : 'none';
+  // 面板裡的提示
+  const notice = document.getElementById('spotify-panel-nologin');
+  if (notice) notice.style.display = token ? 'none' : 'block';
+}
+
+// 從 URL 參數取得 token（OAuth callback）
+function checkSpotifyTokenFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('spotify_token');
+  if (token) {
+    state.settings.spotify_token = token;
+    saveAll();
+    // 清掉 URL 參數
+    window.history.replaceState({}, '', window.location.pathname);
+    updateSpotifyLoginStatus();
+  }
+}
+
+async function searchSpotify() {
+  const q = document.getElementById('spotify-search-input').value.trim();
+  if (!q) return;
+  const token = state.settings.spotify_token;
+  if (!token) {
+    document.getElementById('spotify-panel-nologin').style.display = 'block';
+    return;
+  }
   try {
     const r = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=6`,
-      {headers:{Authorization:`Bearer ${token}`}});
+      { headers: { Authorization: `Bearer ${token}` } });
+    if (r.status === 401) {
+      state.settings.spotify_token = '';
+      saveAll(); updateSpotifyLoginStatus();
+      document.getElementById('spotify-panel-nologin').style.display = 'block';
+      return;
+    }
     const d = await r.json();
     const tracks = d.tracks?.items || [];
-    const con = document.getElementById('spotify-results'); con.innerHTML='';
+    const con = document.getElementById('spotify-results'); con.innerHTML = '';
+    if (!tracks.length) { con.innerHTML = '<div style="font-size:12px;color:var(--color-text-dim);">沒有找到結果</div>'; return; }
     tracks.forEach(t => {
-      const div = document.createElement('div'); div.className='spotify-track';
-      div.innerHTML=`<div style="font-size:18px">🎵</div><div class="spotify-track-info"><div class="spotify-track-name">${t.name}</div><div class="spotify-track-artist">${t.artists.map(a=>a.name).join(', ')}</div></div>`;
-      div.onclick=()=>playTrack(t); con.appendChild(div);
+      const div = document.createElement('div'); div.className = 'spotify-track';
+      div.innerHTML = `<div style="font-size:18px">🎵</div><div class="spotify-track-info"><div class="spotify-track-name">${t.name}</div><div class="spotify-track-artist">${t.artists.map(a => a.name).join(', ')}</div></div>`;
+      div.onclick = () => playTrack(t);
+      con.appendChild(div);
     });
-  } catch(e) { alert('搜尋失敗：'+e.message); }
+  } catch(e) { console.error('Spotify search error:', e); }
 }
 
 async function playTrack(t) {
   const token = state.settings.spotify_token;
+  if (!token) return;
   try {
-    await fetch('https://api.spotify.com/v1/me/player/play',{
-      method:'PUT', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({uris:[t.uri]})
+    await fetch('https://api.spotify.com/v1/me/player/play', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uris: [t.uri] })
     });
     const np = document.getElementById('spotify-now-playing');
-    np.textContent=`▶ ${t.name} — ${t.artists[0].name}`;
+    np.textContent = `▶ ${t.name} — ${t.artists[0].name}`;
     np.classList.add('visible');
-  } catch(e) { alert('播放失敗，請確認裝置已開啟 Spotify'); }
+  } catch(e) {
+    // 可能是沒有開啟 Spotify app，提示開啟
+    openSpotify();
+  }
 }
 
-function spotifyOAuth() {
-  alert('Spotify OAuth 需要後端伺服器支援。\n目前請到 open.spotify.com/get_access_token 取得臨時 token 後填入。');
-}
+function spotifyOAuth() { spotifyLogin(); }
 
 // ============ API PROFILES ============
 function getActiveProfile() {
@@ -2378,12 +2436,11 @@ function updateLogCount() {
 // ============ SETTINGS ============
 function loadSettingsUI() {
   document.getElementById('toggle-autocall').classList.toggle('on', !!state.settings.autocall);
-  document.getElementById('setting-spotify-token').value = state.settings.spotify_token||'';
+  updateSpotifyLoginStatus();
   loadCloudConfigUI();
 }
 
 function saveGeneralSettings() {
-  state.settings.spotify_token = document.getElementById('setting-spotify-token').value.trim();
   saveAll(); showScreen('screen-home');
 }
 
