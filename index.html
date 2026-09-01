@@ -1070,7 +1070,7 @@ let state = {
   callLog: [],
   apiProfiles: [],
   activeProfileId: null,
-  settings: { autocall: false, spotify_token: '' },
+  settings: { autocall: false, spotify_token: '', spotify_refresh: '', spotify_token_time: 0 },
   myProfile: { name: '', info: '', avatarUrl: '', avatarData: '' },
   themes: [],
   activeThemeVars: {},
@@ -2119,18 +2119,39 @@ function updateSpotifyLoginStatus() {
 function checkSpotifyTokenFromURL() {
   const params = new URLSearchParams(window.location.search);
   const token = params.get('spotify_token');
+  const refresh = params.get('spotify_refresh');
   if (token) {
     state.settings.spotify_token = token;
+    if (refresh) state.settings.spotify_refresh = refresh;
+    state.settings.spotify_token_time = Date.now();
     saveAll();
-    // 清掉 URL 參數
     window.history.replaceState({}, '', window.location.pathname);
     updateSpotifyLoginStatus();
   }
 }
 
+// 自動續期：token 超過 50 分鐘就更新
+async function refreshSpotifyTokenIfNeeded() {
+  const { spotify_token, spotify_refresh, spotify_token_time } = state.settings;
+  if (!spotify_token || !spotify_refresh) return;
+  const age = Date.now() - (spotify_token_time || 0);
+  if (age < 50 * 60 * 1000) return; // 還沒到 50 分鐘，不需要更新
+  try {
+    const r = await fetch(`https://swme-api.vercel.app/api/refresh?token=${encodeURIComponent(spotify_refresh)}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.access_token) {
+      state.settings.spotify_token = d.access_token;
+      state.settings.spotify_token_time = Date.now();
+      saveAll();
+    }
+  } catch(e) { console.error('Spotify refresh error:', e); }
+}
+
 async function searchSpotify() {
   const q = document.getElementById('spotify-search-input').value.trim();
   if (!q) return;
+  await refreshSpotifyTokenIfNeeded(); // 先確認 token 是否需要更新
   const token = state.settings.spotify_token;
   if (!token) {
     document.getElementById('spotify-panel-nologin').style.display = 'block';
