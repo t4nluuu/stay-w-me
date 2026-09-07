@@ -2165,18 +2165,13 @@ async function searchSpotify() {
   try {
     const r = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=6`,
       { headers: { Authorization: `Bearer ${token}` } });
-    if (r.status === 401) {
-      state.settings.spotify_token = '';
-      saveAll(); updateSpotifyLoginStatus();
-      document.getElementById('spotify-panel-nologin').style.display = 'block';
-      return;
-    }
+    const responseText = await r.text();
+    console.log('Spotify response:', r.status, responseText);
     if (!r.ok) {
-      const err = await r.json();
-      document.getElementById('spotify-results').innerHTML = `<div style="font-size:12px;color:var(--color-danger);">錯誤 ${r.status}：${err.error?.message||'未知錯誤'}</div>`;
+      document.getElementById('spotify-results').innerHTML = `<div style="font-size:11px;color:var(--color-danger);">${r.status}: ${responseText.slice(0,200)}</div>`;
       return;
     }
-    const d = await r.json();
+    const d = JSON.parse(responseText);
     const tracks = d.tracks?.items || [];
     const con = document.getElementById('spotify-results'); con.innerHTML = '';
     if (!tracks.length) { con.innerHTML = '<div style="font-size:12px;color:var(--color-text-dim);">沒有找到結果</div>'; return; }
