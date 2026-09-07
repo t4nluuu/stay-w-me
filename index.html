@@ -2634,7 +2634,9 @@ function buildBackupData() {
 async function cloudBackup() {
   const cfg = getCloudConfig(); if (!cfg) return;
   setCloudStatus('備份中...');
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(buildBackupData(), null, 2))));
+  const jsonStr = JSON.stringify(buildBackupData(), null, 2);
+  const bytes = new TextEncoder().encode(jsonStr);
+  const content = btoa(String.fromCharCode(...bytes));
   const path = 'backup.json';
   const apiUrl = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`;
   try {
@@ -2671,7 +2673,9 @@ async function cloudRestore() {
     const res = await fetch(apiUrl, { headers: { Authorization: `token ${cfg.token}`, Accept: 'application/vnd.github+json' } });
     if (!res.ok) { setCloudStatus('找不到備份檔案，請先備份一次', true); return; }
     const d = await res.json();
-    const json = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g,'')))));
+    const raw = d.content.replace(/\s/g, ''); // 移除所有空白和換行
+    const bytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+    const json = JSON.parse(new TextDecoder('utf-8').decode(bytes));
     confirmDelete('確定從 GitHub 還原？\n目前的資料會被覆蓋。', () => {
       if (json.contacts)        state.contacts = json.contacts;
       if (json.callLog)         state.callLog = json.callLog;
