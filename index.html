@@ -2171,6 +2171,11 @@ async function searchSpotify() {
       document.getElementById('spotify-panel-nologin').style.display = 'block';
       return;
     }
+    if (!r.ok) {
+      const err = await r.json();
+      document.getElementById('spotify-results').innerHTML = `<div style="font-size:12px;color:var(--color-danger);">錯誤 ${r.status}：${err.error?.message||'未知錯誤'}</div>`;
+      return;
+    }
     const d = await r.json();
     const tracks = d.tracks?.items || [];
     const con = document.getElementById('spotify-results'); con.innerHTML = '';
@@ -2181,7 +2186,9 @@ async function searchSpotify() {
       div.onclick = () => playTrack(t);
       con.appendChild(div);
     });
-  } catch(e) { console.error('Spotify search error:', e); }
+  } catch(e) {
+    document.getElementById('spotify-results').innerHTML = `<div style="font-size:12px;color:var(--color-danger);">連線失敗：${e.message}</div>`;
+  }
 }
 
 async function playTrack(t) {
