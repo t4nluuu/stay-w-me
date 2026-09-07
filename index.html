@@ -2617,16 +2617,18 @@ function getCloudConfig() {
 
 function buildBackupData() {
   return {
-    contacts: state.contacts,
+    contacts: state.contacts.map(c => ({...c, avatarData: ''})),
     callLog: state.callLog,
     apiProfiles: state.apiProfiles.map(p => ({...p, apiKey: ''})),
     activeProfileId: state.activeProfileId,
     settings: { ...state.settings, cloudToken: '', spotify_token: '', spotify_refresh: '' },
-    myProfile: state.myProfile,
+    myProfile: { ...state.myProfile, avatarData: '' },
     themes: state.themes,
     activeThemeVars: state.activeThemeVars,
-    themeHome: state.themeHome, // 包含 bgData 和 lockBgData
-    themeCall: state.themeCall, // 包含通話頁背景
+    themeHome: { ...state.themeHome, bgData: '', lockBgData: '' },
+    themeCall: Object.fromEntries(
+      Object.entries(state.themeCall).map(([id, tc]) => [id, { ...tc, bgData: '' }])
+    ),
     backedUpAt: new Date().toISOString(),
   };
 }
@@ -2634,15 +2636,7 @@ function buildBackupData() {
 async function cloudBackup() {
   const cfg = getCloudConfig(); if (!cfg) return;
   setCloudStatus('備份中...');
-  const jsonStr = JSON.stringify(buildBackupData(), null, 2);
-  const bytes = new TextEncoder().encode(jsonStr);
-  // 分批轉換避免超出 JS 參數限制
-  let binary = '';
-  const chunkSize = 8192;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-  }
-  const content = btoa(binary);
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(buildBackupData(), null, 2))));
   const path = 'backup.json';
   const apiUrl = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`;
   try {
@@ -2679,9 +2673,7 @@ async function cloudRestore() {
     const res = await fetch(apiUrl, { headers: { Authorization: `token ${cfg.token}`, Accept: 'application/vnd.github+json' } });
     if (!res.ok) { setCloudStatus('找不到備份檔案，請先備份一次', true); return; }
     const d = await res.json();
-    const raw = d.content.replace(/\s/g, ''); // 移除所有空白和換行
-    const bytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
-    const json = JSON.parse(new TextDecoder('utf-8').decode(bytes));
+    const json = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\s/g,'')))));
     confirmDelete('確定從 GitHub 還原？\n目前的資料會被覆蓋。', () => {
       if (json.contacts)        state.contacts = json.contacts;
       if (json.callLog)         state.callLog = json.callLog;
